@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient API - JSON Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-test {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-test:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-clear {
+            background: #f0f0f0;
+            color: #666;
+        }
+        
+        .btn-clear:hover {
+            background: #e0e0e0;
+        }
+        
+        .result-container {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .result-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .result-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .result-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .result-success .result-title {
+            color: #155724;
+        }
+        
+        .result-error .result-title {
+            color: #721c24;
+        }
+        
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .example-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .btn-example {
+            flex: 1;
+            padding: 8px 12px;
+            background: #e7f3ff;
+            color: #0066cc;
+            border: 1px solid #0066cc;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn-example:hover {
+            background: #0066cc;
+            color: white;
+        }
+        
+        .info-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📡 Patient API - JSON Request Test</h1>
+        <p class="subtitle">Test API with JSON request body</p>
+        
+        <div class="section">
+            <div class="section-title">Request Configuration</div>
+            
+            <div class="form-group">
+                <label>API Endpoint</label>
+                <input type="text" id="endpoint" value="patient_details.php" readonly>
+            </div>
+            
+            <div class="form-group">
+                <label>Content-Type</label>
+                <input type="text" value="application/json" readonly>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">JSON Request Body</div>
+            
+            <div class="example-buttons">
+                <button class="btn-example" onclick="loadExample('uhid')">Example: By UHID</button>
+                <button class="btn-example" onclick="loadExample('mobile')">Example: By Mobile</button>
+            </div>
+            
+            <div class="form-group">
+                <textarea id="jsonBody" placeholder='{"uhid": "ALV2024001"}'></textarea>
+            </div>
+            
+            <div class="info-box">
+                💡 <strong>Tip:</strong> The API accepts either "uhid" or "mobile" in the JSON body. Click the example buttons above to load sample JSON.
+            </div>
+            
+            <div class="button-group" style="margin-top: 15px;">
+                <button class="btn-test" onclick="sendRequest()">🚀 Send Request</button>
+                <button class="btn-clear" onclick="clearAll()">✖ Clear</button>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            Sending Request...
+        </div>
+        
+        <div class="section" id="responseSection" style="display: none;">
+            <div class="section-title">Response</div>
+            <div class="result-container" id="resultContainer"></div>
+        </div>
+    </div> 
+    <script>
+        function loadExample(type) {
+            const examples = {
+                uhid: {
+                    uhid: "BMSH202602190001"
+                },
+                mobile: {
+                    mobile: "88490609286"
+                }
+            };
+            
+            document.getElementById('jsonBody').value = JSON.stringify(examples[type], null, 2);
+        }
+        
+        async function sendRequest() {
+            const endpoint = document.getElementById('endpoint').value;
+            const jsonBody = document.getElementById('jsonBody').value.trim();
+            const loading = document.getElementById('loading');
+            const responseSection = document.getElementById('responseSection');
+            const resultContainer = document.getElementById('resultContainer');
+            
+            // Validate JSON
+            if (!jsonBody) {
+                showError('Please enter JSON request body');
+                return;
+            }
+            
+            let requestData;
+            try {
+                requestData = JSON.parse(jsonBody);
+            } catch (e) {
+                showError('Invalid JSON format: ' + e.message);
+                return;
+            }
+            
+            // Show loading
+            loading.style.display = 'block';
+            responseSection.style.display = 'none';
+            
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const data = await response.json();
+                
+                // Hide loading
+                loading.style.display = 'none';
+                responseSection.style.display = 'block';
+                
+                // Display result
+                if (data.success) {
+                    showSuccess(data);
+                } else {
+                    showErrorResponse(data);
+                }
+                
+            } catch (error) {
+                loading.style.display = 'none';
+                showError('Connection error: ' + error.message);
+            }
+        }
+        
+        function showSuccess(data) {
+            const resultContainer = document.getElementById('resultContainer');
+            resultContainer.className = 'result-container result-success';
+            resultContainer.innerHTML = `
+                <div class="result-title">✓ Success</div>
+                <strong>Message:</strong> ${data.message}<br><br>
+                <strong>Response Data:</strong>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            resultContainer.style.display = 'block';
+        }
+        
+        function showErrorResponse(data) {
+            const responseSection = document.getElementById('responseSection');
+            const resultContainer = document.getElementById('resultContainer');
+            responseSection.style.display = 'block';
+            resultContainer.className = 'result-container result-error';
+            resultContainer.innerHTML = `
+                <div class="result-title">✗ Error</div>
+                <strong>Message:</strong> ${data.message}<br><br>
+                <strong>Full Response:</strong>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            resultContainer.style.display = 'block';
+        }
+        
+        function showError(message) {
+            const responseSection = document.getElementById('responseSection');
+            const resultContainer = document.getElementById('resultContainer');
+            responseSection.style.display = 'block';
+            resultContainer.className = 'result-container result-error';
+            resultContainer.innerHTML = `
+                <div class="result-title">✗ Error</div>
+                <div>${message}</div>
+            `;
+            resultContainer.style.display = 'block';
+        }
+        
+        function clearAll() {
+            document.getElementById('jsonBody').value = '';
+            document.getElementById('responseSection').style.display = 'none';
+        }
+        
+        // Load default example on page load
+        window.onload = function() {
+            loadExample('uhid');
+        };
+    </script>
+</body>
+</html>

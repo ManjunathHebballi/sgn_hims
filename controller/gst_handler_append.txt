@@ -1,0 +1,17 @@
+
+// ======================== GST RATE MANAGEMENT OPERATIONS ========================
+if(isset($_REQUEST['submit']) && $_REQUEST['submit']=='store_gst_rate')
+{
+    $category_id = $_REQUEST['category_id'];
+    $gst_percent = $_REQUEST['gst_percent'];
+    
+    // Disable old rates first
+    $newStore->disableOldGstRate($category_id);
+    
+    // Set new rate
+    $newStore->setGstRateForCategory($category_id, $gst_percent);
+    
+    echo "<script>window.location='../gst_rate_master.php?success=1'</script>";
+}
+
+?>

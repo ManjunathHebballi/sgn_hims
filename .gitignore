@@ -1,0 +1,147 @@
+# PHP Hospital Management System - Git Ignore File
+
+# ===========================
+# Sensitive Configuration Files
+# ===========================
+# Database configuration with credentials
+config/*.php
+# ABDM/ABHA config carries no secrets - every value comes from .env.
+!config/abdm_config.php
+!config/abdm_display.php
+!config/env_loader.php
+!config/dev_guard.php
+# dbconnect.php
+model/dbconnect.php
+billing/model/dbconnect.php
+model/session_config.php
+.env
+.env.local
+
+# ===========================
+# Dependencies & Packages
+# ===========================
+composer.lock
+node_modules/
+package-lock.json
+
+# ===========================
+# IDE & Editor Files
+# ===========================
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+.phpintel/
+*.swp
+*.swo
+*~
+
+# ===========================
+# OS-Specific Files
+# ===========================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.directory
+
+# ===========================
+# Logs & Debugging
+# ===========================
+*.log
+error_log
+debug.log
+php_error.log
+logs/
+*.out
+
+# ===========================
+# Temporary & Cache Files
+# ===========================
+tmp/
+temp/
+cache/
+*.tmp
+*.cache
+sessions/
+
+# ===========================
+# Uploaded Files & User Content
+# ===========================
+# Patient documents, images, reports
+uploads/
+files/
+reports/generated/
+prescriptions/generated/
+patient_images/
+patient_documents/
+lab_reports/
+radiology_images/
+discharge_summaries/
+
+# ===========================
+# Backup Files
+# ===========================
+*.sql
+*.sql.gz
+*.sql.zip
+# Schema migrations are source, not backups.
+!sql/*.sql
+backup/
+backups/
+*.bak
+db_backup/
+
+# ===========================
+# Build & Compiled Files
+# ===========================
+dist/
+build/
+
+# Exclude if you minify files
+
+# ===========================
+# Security & Sensitive Data
+# ===========================
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+credentials.json
+secrets.json
+
+# ===========================
+# PHP-Specific
+# ===========================
+*.cache
+.php_cs.cache
+.phpunit.result.cache
+
+# ===========================
+# Version Control
+# ===========================
+.svn/
+.git/
+.hg/
+
+# ===========================
+# Project-Specific
+# ===========================
+# Add any project-specific files or directories here
+test_data/
+development_notes.txt
+TODO.txt

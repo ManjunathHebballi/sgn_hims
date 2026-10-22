@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Details API - Test Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-search {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-search:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-clear {
+            background: #f0f0f0;
+            color: #666;
+        }
+        
+        .btn-clear:hover {
+            background: #e0e0e0;
+        }
+        
+        .result-container {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .result-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .result-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .result-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .result-success .result-title {
+            color: #155724;
+        }
+        
+        .result-error .result-title {
+            color: #721c24;
+        }
+        
+        .patient-details {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 10px;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .detail-value {
+            color: #555;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .api-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .api-info strong {
+            color: #333;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏥 Patient Details API</h1>
+        <p class="subtitle">Search patient by UHID or Mobile Number</p>
+        
+        <form id="searchForm">
+            <div class="form-group">
+                <label for="uhid">Search by UHID</label>
+                <input type="text" id="uhid" name="uhid" placeholder="Enter UHID (e.g., ALV2024001)">
+            </div>
+            
+            <div class="form-group">
+                <label for="mobile">OR Search by Mobile Number</label>
+                <input type="text" id="mobile" name="mobile" placeholder="Enter Mobile Number (e.g., 9876543210)">
+            </div>
+            
+            <div class="button-group">
+                <button type="submit" class="btn-search">🔍 Search Patient</button>
+                <button type="button" class="btn-clear" onclick="clearForm()">✖ Clear</button>
+            </div>
+        </form>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            Searching...
+        </div>
+        
+        <div class="result-container" id="resultContainer"></div>
+        
+        <div class="api-info">
+            <strong>API Endpoint:</strong> /api/patient_details.php<br>
+            <strong>Method:</strong> GET / POST<br>
+            <strong>Parameters:</strong> uhid OR mobile
+        </div>
+    </div>
+    
+    <script>
+        const form = document.getElementById('searchForm');
+        const resultContainer = document.getElementById('resultContainer');
+        const loading = document.getElementById('loading');
+        const uhidInput = document.getElementById('uhid');
+        const mobileInput = document.getElementById('mobile');
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const uhid = uhidInput.value.trim();
+            const mobile = mobileInput.value.trim();
+            
+            // Validation
+            if (!uhid && !mobile) {
+                showError('Please enter either UHID or Mobile Number');
+                return;
+            }
+            
+            // Build query string
+            const params = new URLSearchParams();
+            if (uhid) {
+                params.append('uhid', uhid);
+            } else if (mobile) {
+                params.append('mobile', mobile);
+            }
+            
+            // Show loading
+            loading.style.display = 'block';
+            resultContainer.style.display = 'none';
+            
+            try {
+                const response = await fetch(`patient_details.php?${params.toString()}`);
+                const data = await response.json();
+                
+                // Hide loading
+                loading.style.display = 'none';
+                
+                // Display result
+                if (data.success) {
+                    showSuccess(data.data);
+                } else {
+                    showError(data.message);
+                }
+                
+            } catch (error) {
+                loading.style.display = 'none';
+                showError('Connection error: ' + error.message);
+            }
+        });
+        
+        function showSuccess(patient) {
+            resultContainer.className = 'result-container result-success';
+            resultContainer.innerHTML = `
+                <div class="result-title">✓ Patient Found</div>
+                <div class="patient-details">
+                    <div class="detail-label">UHID:</div>
+                    <div class="detail-value">${patient.uhid}</div>
+                    
+                    <div class="detail-label">Name:</div>
+                    <div class="detail-value">${patient.name}</div>
+                    
+                    <div class="detail-label">Mobile:</div>
+                    <div class="detail-value">${patient.mobile}</div>
+                    
+                    <div class="detail-label">OPD No:</div>
+                    <div class="detail-value">${patient.opd_no}</div>
+                    
+                    <div class="detail-label">Age:</div>
+                    <div class="detail-value">${patient.age}</div>
+                    
+                    <div class="detail-label">Gender:</div>
+                    <div class="detail-value">${patient.gender}</div>
+                    
+                    <div class="detail-label">Address:</div>
+                    <div class="detail-value">${patient.address}</div>
+                    
+                    <div class="detail-label">Last Visit:</div>
+                    <div class="detail-value">${patient.last_visit_date}</div>
+                </div>
+            `;
+            resultContainer.style.display = 'block';
+        }
+        
+        function showError(message) {
+            resultContainer.className = 'result-container result-error';
+            resultContainer.innerHTML = `
+                <div class="result-title">✗ Error</div>
+                <div>${message}</div>
+            `;
+            resultContainer.style.display = 'block';
+        }
+        
+        function clearForm() {
+            form.reset();
+            resultContainer.style.display = 'none';
+            uhidInput.focus();
+        }
+        
+        // Prevent entering both UHID and mobile
+        uhidInput.addEventListener('input', () => {
+            if (uhidInput.value) {
+                mobileInput.disabled = true;
+                mobileInput.style.background = '#f0f0f0';
+            } else {
+                mobileInput.disabled = false;
+                mobileInput.style.background = 'white';
+            }
+        });
+        
+        mobileInput.addEventListener('input', () => {
+            if (mobileInput.value) {
+                uhidInput.disabled = true;
+                uhidInput.style.background = '#f0f0f0';
+            } else {
+                uhidInput.disabled = false;
+                uhidInput.style.background = 'white';
+            }
+        });
+        
+        // Focus on first input on load
+        uhidInput.focus();
+    </script>
+</body>
+</html>

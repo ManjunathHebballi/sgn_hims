@@ -1,0 +1,40 @@
+# === Disable Apache Request Body Limit ===
+LimitRequestBody 0
+
+# === Disable/Relax ModSecurity for large forms ===
+<IfModule mod_security.c>
+   SecFilterEngine Off
+   SecFilterScanPOST Off
+   SecRuleEngine Off
+   SecRuleRemoveById 200003 200004 200005 200006 200007
+   SecRuleRemoveById 960010 960015 960020
+   SecRuleRemoveById 981173 981203
+</IfModule>
+
+# BEGIN cPanel-generated php ini directives, do not edit
+<IfModule php7_module>
+   php_flag display_errors Off
+   php_value max_execution_time 300
+   php_value max_input_time 60
+   php_value max_input_vars 20000
+   php_value memory_limit 256M
+   php_value post_max_size 64M
+   php_value session.gc_maxlifetime 1440
+   php_value session.save_path "/var/cpanel/php/sessions/ea-php74"
+   php_value upload_max_filesize 64M
+   php_flag zlib.output_compression Off
+</IfModule>
+
+<IfModule lsapi_module>
+   php_flag display_errors Off
+   php_value max_execution_time 300
+   php_value max_input_time 60
+   php_value max_input_vars 20000
+   php_value memory_limit 256M
+   php_value post_max_size 64M
+   php_value session.gc_maxlifetime 1440
+   php_value session.save_path "/var/cpanel/php/sessions/ea-php74"
+   php_value upload_max_filesize 64M
+   php_flag zlib.output_compression Off
+</IfModule>
+# END cPanel-generated php ini directives, do not edit

@@ -1,0 +1,1372 @@
+/* ===========================================================================
+   SGN HMS — shared visual system
+   ---------------------------------------------------------------------------
+   Layered over css/style.css (a purchased Bootstrap 4 admin theme). Nothing
+   here changes markup or behaviour; it restyles the surfaces every page
+   inherits through leftbar.php: topbar, page headers, cards, tables, forms,
+   buttons, badges, modals, DataTables.
+
+   THE RULE THIS SYSTEM IS BUILT ON
+   -------------------------------
+   The chrome is achromatic. Every saturated colour in the interface means a
+   clinical or transactional state — nothing is coloured for emphasis alone.
+
+   The reason is in the app itself: the lab dashboard legend assigns status to
+   Violet, DarkCyan, DarkMagenta, MediumSeaGreen, MediumTurquoise and Orange.
+   Six arbitrary hues with no hierarchy, sitting next to a blue navbar, green
+   buttons and red badges. When everything is coloured, a critical record has
+   no way to announce itself. So the state ramp below is derived from triage
+   tags — the one colour code every clinician already reads — and the rail,
+   topbar and secondary buttons give up their colour so that ramp stays
+   exclusive.
+
+   --action is held deliberately apart from --ok: a button must never read as
+   a resolved state.
+
+   THE SIGNATURE: THE RECORD SPINE
+   -------------------------------
+   Anything representing a record — a table row, a card — carries a 3px left
+   edge in its state colour and its identifier set in tinted mono. It is the
+   digital form of the coloured tag on a ward bed board: the thing staff
+   already scan for. See section 3b for the classes.
+
+   Loaded last, after style.css and sidebar-nav.css. !important is used only
+   where the Bootstrap theme is itself !important or wins on specificity.
+
+   Print pages (print_*.php) do not include leftbar.php, so none of this
+   reaches printed output.
+   =========================================================================== */
+
+/* ============================================================ 1. TOKENS === */
+
+:root {
+    color-scheme: light;
+
+    /* ---------------------------------------------------------- the palette
+       Taken from the Nexenstial HIMS demo so the two products read as one
+       family. Their own names are kept in the comments so any value can be
+       traced back: herb is the blue ramp, saffron the gold, clay the
+       terracotta, leaf the green, vata the periwinkle, sand the hairline.
+       ------------------------------------------------------------------- */
+
+    /* ground + ink ------------------------------------------------------- */
+    --paper:        #E7ECF4;   /* their page ground */
+    --surface:      #FFFFFF;   /* the sheet: cards, table bodies */
+    --surface-2:    #EBF3FB;   /* herb-50: table heads, inset panels, hover */
+    --surface-3:    #E7E9F4;   /* vata-100: toolbars, disabled fields */
+    --rule:         #D5DCE6;   /* sand: the hairline they use throughout */
+    --rule-2:       #E4E9F1;   /* lighter hairline, row separators */
+
+    --ink:          #1A2431;   /* their ink */
+    --ink-2:        #49576B;   /* ink-soft: secondary text */
+    --ink-3:        #5C6A7D;   /* between their soft and faint. Their faint
+                                  (#7B8798) measures 3.3:1 on --surface-2,
+                                  which an 11px column head cannot use. */
+    --ink-4:        #7B8798;   /* ink-faint: placeholders only */
+    --ink-head:     #1B3E66;   /* herb-800: they set headings in a deep blue
+                                  rather than in black */
+
+    /* chrome — the rail and topbar, on their sand hairline ------------- */
+    --chrome:            #FFFFFF;   /* white, as their rail is */
+    --chrome-2:          #EFF4FA;   /* hover */
+    --chrome-3:          #D3E5F6;   /* herb-100: the active pill */
+    --chrome-rule:       #D5DCE6;   /* sand */
+    --chrome-inset:      #F4F8FD;   /* open submenu panel */
+    --chrome-field:      #EFF3F9;   /* the search pill, tinted so it reads as a
+                                        control on the white bar - their value */
+    --chrome-field-rule: #D5DCE6;
+    --chrome-badge:      #D3E5F6;
+    --chrome-badge-rule: #A9CCEC;   /* herb-200 */
+    --chrome-scroll:     rgba(26, 36, 49, .18);
+    --chrome-veil:       rgba(255, 255, 255, .85);
+    --on-chrome:         #49576B;
+    --on-chrome-dim:     #5C6A7D;
+    --on-chrome-hi:      #1E4A7E;   /* herb-700: their active nav label */
+
+    /* the single interactive colour — their primary ---------------------- */
+    --action:       #245A9A;   /* herb-600 */
+    --action-2:     #1E4A7E;   /* herb-700 */
+    --action-bg:    #D3E5F6;   /* herb-100 */
+    --action-rule:  #A9CCEC;   /* herb-200 */
+    --action-ring:  rgba(36, 90, 154, .18);
+
+    /* clinical state — the triage ramp, re-hued onto their ramps --------- */
+    --critical:     #93381F;   --critical-bg: #F1DED7;  --critical-rule: #DBB5A8;  /* clay */
+    --caution:      #7B5417;   --caution-bg:  #F5E4C2;  --caution-rule:  #EACB8C;  /* saffron */
+    --ok:           #31633F;   --ok-bg:       #E0EDE1;  --ok-rule:       #B4D3BA;  /* leaf */
+    --info:         #245A9A;   --info-bg:     #D3E5F6;  --info-rule:     #A9CCEC;  /* herb */
+    --inert:        #4E5A6B;   --inert-bg:    #E7E9F4;  --inert-rule:    #C6CBE7;  /* vata */
+
+    /* metrics — matching theirs: 28px cards, full pills, soft shadows and no
+       heavy borders. A worklist never reaches the card corner because it sits
+       inside .card-body padding, so 28px is safe here too. */
+    --radius:       10px;
+    --radius-lg:    28px;
+    --radius-pill:  9999px;
+    --spine:        3px;
+    --shadow:       0 1px 2px rgba(16, 35, 60, .05), 0 6px 18px -10px rgba(16, 35, 60, .16);
+    --shadow-pop:   0 16px 40px -12px rgba(16, 35, 60, .28), 0 2px 8px rgba(16, 35, 60, .08);
+
+    --topbar-h:     56px;   /* theirs */
+    --rail-w:       240px;   /* theirs */
+
+    /* type — their three faces ------------------------------------------ */
+    --font-ui:      "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-display: "Poppins", "Plus Jakarta Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-id:      "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+/* --------------------------------------------------------------- 1b. NIGHT
+   Wards run 24 hours. A white screen at 3am in a dim nurses' station is a
+   real complaint, so night is a first-class mode rather than an inversion
+   filter. Only the tokens change; every rule below is written against them.
+
+   State hues lift in lightness and drop in chroma so they stay legible on a
+   dark ground without glowing. Toggled from the topbar; see leftbar.php.
+   ------------------------------------------------------------------------ */
+
+html[data-theme="night"] {
+    color-scheme: dark;
+
+    /* Their demo carries a dark mode too. These are built from the deep end
+       of the same herb ramp (900/950) so night is the same family rather than
+       a neutral grey inversion. */
+    --paper:        #0E1D30;   /* herb-950 */
+    --surface:      #13263E;
+    --surface-2:    #182F4C;   /* herb-900 */
+    --surface-3:    #1B3E66;   /* herb-800 */
+    --rule:         #26405E;
+    --rule-2:       #1C3350;
+
+    --ink:          #E7ECF4;
+    --ink-2:        #B7C3D4;
+    --ink-3:        #93A2B6;
+    --ink-4:        #7B8798;
+    --ink-head:     #A9CCEC;   /* herb-200 */
+
+    --chrome:            #0A1727;
+    --chrome-2:          #16283F;
+    --chrome-3:          #1B3E66;
+    --chrome-rule:       rgba(255, 255, 255, .08);
+    --chrome-inset:      #081320;
+    --chrome-field:      #16283F;
+    --chrome-field-rule: #26405E;
+    --chrome-badge:      #1B3E66;
+    --chrome-badge-rule: #2C567F;
+    --chrome-scroll:     rgba(255, 255, 255, .18);
+    --chrome-veil:       rgba(10, 23, 39, .85);
+    --on-chrome:         #C3D0E0;
+    --on-chrome-dim:     #93A2B6;
+    --on-chrome-hi:      #FFFFFF;
+
+    --action:       #76ABDD;   /* herb-300 */
+    --action-2:     #A9CCEC;   /* herb-200 */
+    --action-bg:    #1B3E66;
+    --action-rule:  #2C567F;
+    --action-ring:  rgba(118, 171, 221, .25);
+
+    --critical:     #E09A80;   --critical-bg: #3A1F17;  --critical-rule: #6B3A28;
+    --caution:      #FFBE33;   --caution-bg:  #33260C;  --caution-rule:  #6B5019;
+    --ok:           #7CC08D;   --ok-bg:       #16301D;  --ok-rule:       #2E5E3B;
+    --info:         #76ABDD;   --info-bg:     #14283F;  --info-rule:     #2C567F;
+    --inert:        #93A2B6;   --inert-bg:    #1C2436;  --inert-rule:    #34405A;
+
+    --shadow:       0 1px 2px rgba(0, 0, 0, .4);
+    --shadow-pop:   0 16px 40px -12px rgba(0, 0, 0, .6), 0 2px 8px rgba(0, 0, 0, .4);
+}
+
+/* ======================================================== 2. TYPOGRAPHY === */
+
+body {
+    font-family: var(--font-ui) !important;
+    background: var(--paper) !important;
+    color: var(--ink);
+    font-size: 13.5px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6,
+.card-title {
+    font-family: var(--font-display) !important;
+    color: var(--ink-head);
+    font-weight: 600;
+    letter-spacing: -.012em;
+}
+
+/* ---------------------------------------------------------------- eyebrow
+   Structural labels — column heads, section eyebrows, field labels — are set
+   in Archivo at 82% width. Condensed because a printed register head is
+   condensed: it has to fit the column it names. It is also the cheapest way
+   to buy back horizontal room in a twelve-column worklist. */
+.eyebrow,
+.form-group > label,
+.table thead th,
+.hms-page__eyebrow {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+
+small, .small, .text-muted { color: var(--ink-3) !important; }
+
+/* The admin theme uppercases page titles. Kept — but tracked out and dropped
+   to a label weight so it reads as a heading rather than a shout. */
+.content-body h4.text-uppercase,
+.page-title {
+    font-family: var(--font-display) !important;
+    font-size: 15px !important;
+    font-weight: 700;
+    letter-spacing: .06em;
+    color: var(--ink);
+    margin-bottom: 0;
+}
+
+/* ------------------------------------------------------- 2b. SENTENCE CASE
+   Every role block in leftbar.php repeats `.content-body { text-transform:
+   uppercase }`, so the application renders in capitals — patient names, test
+   names, diagnoses, alerts. Capitals remove the word-shape cue the eye uses
+   to scan a name column, which is the single biggest legibility cost on
+   these screens.
+
+   It is left ON by default, and that is a deliberate call rather than an
+   oversight. text-transform is display-only: it never changed what was
+   stored. Turning it off therefore reveals the stored casing — and across
+   1M+ historic rows that casing is unknown and probably inconsistent, so
+   names could come back as "ramesh kumar patel". Only someone who can look
+   at the data can make that call.
+
+   To switch the whole application to sentence case, add the class to the
+   body tag of the page — or once in leftbar.php, for every page:
+
+       <body class="sentence-case">
+
+   Data-entry fields keep their capitals either way, so typing is unchanged,
+   and structural capitals (column heads, labels, badges) are a type choice
+   rather than stored data, so they stay.
+   ------------------------------------------------------------------------ */
+body.sentence-case .content-body,
+body.sentence-case .content-body .table,
+body.sentence-case .content-body .card {
+    text-transform: none !important;
+}
+body.sentence-case .content-body .form-control { text-transform: uppercase; }
+body.sentence-case .content-body .table thead th,
+body.sentence-case .content-body .form-group > label,
+body.sentence-case .content-body .eyebrow,
+body.sentence-case .content-body .badge { text-transform: uppercase !important; }
+
+/* ============================================ 3. THE SIGNATURE: IDENTIFIER */
+/*
+   In this system the identifier is what staff read aloud, check against a
+   wristband and match to paper. Giving it its own face is information, not
+   decoration — it is the one thing on the row that must never be misread.
+
+   Applied to the helper classes the newer screens already use, and to any
+   cell a page marks .identifier.
+*/
+.pr-num, .bb-barcode, .id-num,
+td.identifier, .identifier {
+    font-family: var(--font-id) !important;
+    font-size: 12px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.01em;
+    color: var(--ink) !important;
+    background: var(--surface-3);
+    border: 1px solid var(--rule-2);
+    padding: 1px 6px;
+    border-radius: var(--radius);
+    white-space: nowrap;
+}
+
+/* Identifier fields are typed as identifiers too. */
+input[name="uhid"], input[name="opd_no"], input[name="opno"],
+input[name="ipd_no"], input[name="abha_number"], input#uhid,
+input[name="bill_no"], input[name="patient_no"], input[name="lab_no"] {
+    font-family: var(--font-id);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.01em;
+}
+
+/* Any column of figures lines up. */
+td.num, th.num, .num, .amount, .money {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+/* ------------------------------------------------- 3b. THE RECORD SPINE ---
+   A 3px left edge in the record's state colour. Cheaper to scan down a
+   fifty-row worklist than a badge, and it survives being read from a metre
+   away — which is how a bed board is actually used.
+
+   Usage:  <tr class="state-critical">   or   <div class="card state-caution">
+
+   critical = needs action now      caution = due / overdue
+   ok       = complete, resolved    info    = in progress, awaiting
+   inert    = closed, cancelled, expired
+   ------------------------------------------------------------------------ */
+tr.state-critical > td:first-child { box-shadow: inset var(--spine) 0 0 var(--critical); }
+tr.state-caution  > td:first-child { box-shadow: inset var(--spine) 0 0 var(--caution); }
+tr.state-ok       > td:first-child { box-shadow: inset var(--spine) 0 0 var(--ok); }
+tr.state-info     > td:first-child { box-shadow: inset var(--spine) 0 0 var(--info); }
+tr.state-inert    > td:first-child { box-shadow: inset var(--spine) 0 0 var(--inert); }
+
+.card.state-critical { border-left: var(--spine) solid var(--critical) !important; }
+.card.state-caution  { border-left: var(--spine) solid var(--caution) !important; }
+.card.state-ok       { border-left: var(--spine) solid var(--ok) !important; }
+.card.state-info     { border-left: var(--spine) solid var(--info) !important; }
+.card.state-inert    { border-left: var(--spine) solid var(--inert) !important; }
+
+/* A row that is closed or cancelled recedes rather than shouting. */
+tr.state-inert > td { color: var(--ink-3); }
+
+/* ========================================================== 4. TOP BAR === */
+
+#page-topbar {
+    background: var(--chrome) !important;
+    height: var(--topbar-h);
+    box-shadow: none !important;
+    border-bottom: 1px solid var(--chrome-rule);
+}
+
+#page-topbar .navbar-header {
+    height: var(--topbar-h);
+    padding: 0 12px 0 0;
+    align-items: center;
+}
+
+
+/* The hospital name is the only identity in the chrome, so it is set in the
+   display face rather than left as Bootstrap's .h4. */
+#page-topbar .navbar-header > .h4 {
+    font-family: var(--font-display) !important;
+    font-size: 13.5px !important;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--on-chrome) !important;
+    margin: 0;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#page-topbar .header-item {
+    color: var(--on-chrome) !important;
+    height: var(--topbar-h);
+    border: 0;
+    box-shadow: none !important;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+}
+#page-topbar .header-item:hover,
+#page-topbar .header-item:focus {
+    background: var(--chrome-2) !important;
+    color: var(--on-chrome-hi) !important;
+}
+#page-topbar .header-profile-user {
+    height: 26px;
+    width: 26px;
+    border: 1px solid var(--chrome-3);
+}
+
+/* The mega-menu stub in the markup is empty and has no trigger; it renders as
+   a stray box on wide screens. */
+#page-topbar .dropdown-mega { display: none !important; }
+
+/* ======================================================== 5. SURFACES === */
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--rule) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow) !important;
+    margin-bottom: 16px;
+}
+
+.card-body { padding: 16px 18px !important; }
+
+/* A card that leads with a heading gets a hairline under it rather than the
+   theme's <hr>, which sat too heavy. */
+.card-body > h5:first-child,
+.card-body > h4:first-child {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -.008em;
+    color: var(--ink-head);
+    margin: 0 0 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule-2);
+}
+
+.card-body > hr { border-top-color: var(--rule-2); margin: 12px 0 16px; }
+
+.modal-content {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-pop);
+}
+.modal-header, .modal-footer { border-color: var(--rule-2); }
+.modal-title {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink-head);
+}
+.dropdown-menu {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-pop);
+    font-size: 13px;
+    padding: 4px;
+}
+.dropdown-item { color: var(--ink-2); border-radius: var(--radius); padding: 7px 10px; }
+.dropdown-item:hover, .dropdown-item:focus { background: var(--surface-2); color: var(--ink); }
+.dropdown-divider { border-top-color: var(--rule-2); }
+
+/* --------------------------------------------------------- 5b. PAGE HEAD
+   One ruled line: which module you are in, what this screen is, what you can
+   do here. Optional markup — pages that do not use it are unaffected.
+
+     <div class="hms-page">
+       <div>
+         <p class="hms-page__eyebrow">Laboratory</p>
+         <h1 class="hms-page__title">Sample collection</h1>
+       </div>
+       <div class="hms-page__actions"> ... </div>
+     </div>
+   ------------------------------------------------------------------------ */
+.hms-page {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 2px 0 12px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--rule);
+}
+.hms-page__eyebrow { margin: 0 0 2px; }
+.hms-page__title {
+    font-family: var(--font-display);
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    color: var(--ink-head);
+    margin: 0;
+    line-height: 1.15;
+}
+.hms-page__actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* ===================================================== 6. DATA TABLES === */
+
+.table {
+    color: var(--ink);
+    font-size: 13px;
+    margin-bottom: 0;
+    background: var(--surface);
+}
+
+.table thead th,
+.table .thead-dark th,
+.table .thead-light th,
+.table .thead-primary th {
+    background: var(--surface-2) !important;
+    color: var(--ink-3) !important;
+    font-family: var(--font-display) !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    border-top: 0 !important;
+    border-bottom: 1px solid var(--rule) !important;
+    padding: 9px 12px !important;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.table tbody td {
+    padding: 8px 12px !important;
+    border-top: 1px solid var(--rule-2) !important;
+    vertical-align: middle;
+}
+
+.table tbody tr:hover { background: var(--surface-2); }
+
+.table-bordered,
+.table-bordered td,
+.table-bordered th { border-color: var(--rule-2) !important; }
+
+.table tfoot th,
+.table tfoot td {
+    background: var(--surface-2);
+    border-top: 1px solid var(--rule) !important;
+    font-weight: 600;
+}
+
+/* A long worklist is read by running a finger down it — the head has to stay
+   put while the body scrolls. */
+.table-responsive { border-radius: var(--radius); }
+.table-responsive > .table thead th { position: sticky; top: 0; z-index: 2; }
+
+/* ========================================================== 7. STATUS === */
+/*
+   A badge names a state, so it is set in that state's own colour on a tinted
+   ground rather than as a saturated block. Semantic hues only.
+*/
+.badge {
+    font-family: var(--font-display);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    border: 1px solid transparent;
+    vertical-align: middle;
+}
+
+.badge-success                  { background: var(--ok-bg) !important;       color: var(--ok) !important;       border-color: var(--ok-rule); }
+.badge-danger                   { background: var(--critical-bg) !important; color: var(--critical) !important; border-color: var(--critical-rule); }
+.badge-warning                  { background: var(--caution-bg) !important;  color: var(--caution) !important;  border-color: var(--caution-rule); }
+.badge-info, .badge-primary     { background: var(--info-bg) !important;     color: var(--info) !important;     border-color: var(--info-rule); }
+.badge-secondary, .badge-light  { background: var(--inert-bg) !important;    color: var(--inert) !important;    border-color: var(--inert-rule); }
+.badge-dark                     { background: var(--surface-3) !important;   color: var(--ink) !important;      border-color: var(--rule); }
+
+/* ======================================================== 8. CONTROLS === */
+
+.form-control,
+.custom-select,
+select.form-control {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--surface) !important;   /* style.css forces #f9f9f9 !important */
+    border: 1px solid var(--rule) !important;
+    border-radius: var(--radius);
+    padding: 6px 10px;
+    height: auto;
+    min-height: 34px;
+    box-shadow: none;
+    transition: border-color .12s ease, box-shadow .12s ease;
+}
+
+.form-control:focus,
+.custom-select:focus {
+    border-color: var(--action) !important;
+    box-shadow: 0 0 0 3px var(--action-ring) !important;
+    outline: none;
+}
+
+.form-control::placeholder { color: var(--ink-4); opacity: 1; }
+.form-control:disabled,
+.form-control[readonly] { background: var(--surface-3) !important; color: var(--ink-3); }
+
+.form-group > label { margin-bottom: 4px; display: block; }
+
+/* A required field is marked once, on its label, rather than by colouring
+   the whole control. */
+.form-group > label.required::after { content: " *"; color: var(--critical); }
+
+.input-group-text {
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    color: var(--ink-3);
+    font-size: 12.5px;
+    border-radius: var(--radius);
+}
+
+.custom-control-label::before { border-color: var(--rule); background: var(--surface); }
+.custom-control-input:checked ~ .custom-control-label::before {
+    background: var(--action);
+    border-color: var(--action);
+}
+
+/* The theme's select plugins, so they match the native controls beside them. */
+.bootstrap-select .btn-light,
+.select2-container--default .select2-selection--single {
+    background: var(--surface) !important;
+    border: 1px solid var(--rule) !important;
+    border-radius: var(--radius) !important;
+    color: var(--ink) !important;
+    min-height: 34px;
+    font-size: 13px;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: var(--ink) !important;
+    line-height: 32px;
+}
+.select2-dropdown { background: var(--surface); border-color: var(--rule); }
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background: var(--action) !important;
+}
+
+/* ========================================================= 9. BUTTONS === */
+
+.btn {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--radius-pill) !important;
+    padding: 8px 18px;
+    letter-spacing: .003em;
+    box-shadow: none !important;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+}
+
+.btn-rounded { border-radius: var(--radius-pill) !important; }
+.btn-sm { font-size: 12.5px; padding: 4px 10px; }
+.btn-lg { font-size: 14px; padding: 10px 20px; }
+
+/* The one thing you press. Bootstrap's primary and success both land here:
+   across this app they were used interchangeably for "submit", so they are
+   now the same button. */
+.btn-primary, .btn-success {
+    background: var(--action) !important;
+    border-color: var(--action) !important;
+    color: #fff !important;
+}
+.btn-primary:hover, .btn-success:hover,
+.btn-primary:focus, .btn-success:focus {
+    background: var(--action-2) !important;
+    border-color: var(--action-2) !important;
+    color: #fff !important;
+}
+
+/* Secondary actions are achromatic — they are not states. */
+.btn-light, .btn-secondary, .btn-default {
+    background: var(--surface) !important;
+    border-color: var(--rule) !important;
+    color: var(--ink-2) !important;
+}
+.btn-light:hover, .btn-secondary:hover, .btn-default:hover {
+    background: var(--surface-2) !important;
+    border-color: var(--rule) !important;
+    color: var(--ink) !important;
+}
+
+.btn-info    { background: var(--info) !important;     border-color: var(--info) !important;     color: #fff !important; }
+.btn-warning { background: var(--caution) !important;  border-color: var(--caution) !important;  color: #fff !important; }
+
+/* Destructive keeps the critical hue — here it genuinely is the state. */
+.btn-danger {
+    background: var(--critical) !important;
+    border-color: var(--critical) !important;
+    color: #fff !important;
+}
+.btn-danger:hover { background: #9C1E11 !important; border-color: #9C1E11 !important; }
+
+.btn-outline-danger { color: var(--critical); border-color: var(--critical-rule); background: transparent; }
+.btn-outline-danger:hover { background: var(--critical); border-color: var(--critical); color: #fff; }
+.btn-outline-success, .btn-outline-primary { color: var(--action); border-color: var(--action-rule); background: transparent; }
+.btn-outline-success:hover, .btn-outline-primary:hover { background: var(--action); border-color: var(--action); color: #fff; }
+
+/* There can be six icon actions in one row — they read as affordances, not
+   as six coloured blocks. */
+.table .btn-sm i { font-size: 14px; }
+
+/* ========================================================== 10. ALERTS === */
+
+.alert {
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    border-left-width: var(--spine);
+    font-size: 13px;
+    padding: 10px 14px;
+}
+.alert-success { background: var(--ok-bg);       color: var(--ok);       border-color: var(--ok-rule);       border-left-color: var(--ok); }
+.alert-danger  { background: var(--critical-bg); color: var(--critical); border-color: var(--critical-rule); border-left-color: var(--critical); }
+.alert-warning { background: var(--caution-bg);  color: var(--caution);  border-color: var(--caution-rule);  border-left-color: var(--caution); }
+.alert-info    { background: var(--info-bg);     color: var(--info);     border-color: var(--info-rule);     border-left-color: var(--info); }
+
+/* ====================================================== 11. STAT TILES === */
+/*
+   The figure is the content, so it is set large in tabular numerals with its
+   label above in condensed capitals — read top-down, label then number. The
+   label goes first because on a shift you already know which number you are
+   looking for; you are locating it, not discovering it.
+*/
+.pr-stat h2, .bb-stat h2, .abha-stat h2,
+.hms-stat__value {
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.03em;
+    color: var(--ink);
+    line-height: 1.05;
+    margin: 0;
+}
+
+.pr-stat p, .bb-stat p, .abha-stat p,
+.hms-stat__label {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 0 6px;
+}
+
+/* --------------------------------------------------------- 12. BED BOARD
+   One cell per bed, coloured by state — the physical bed board the ward
+   keeps by the nurses' station, which is still the fastest way to answer
+   "have we got a bed". A percentage bar cannot answer that; a count of
+   discrete cells can.
+
+     <div class="hms-beds">
+       <span class="hms-bed is-occupied"></span>
+       <span class="hms-bed is-free"></span> ...
+     </div>
+   ------------------------------------------------------------------------ */
+.hms-beds { display: flex; flex-wrap: wrap; gap: 3px; }
+.hms-bed {
+    width: 13px;
+    height: 18px;
+    border-radius: 1.5px;
+    background: var(--surface-3);
+    border: 1px solid var(--rule);
+    display: block;
+}
+.hms-bed.is-occupied { background: var(--ink-2);    border-color: var(--ink-2); }
+.hms-bed.is-free     { background: var(--surface);  border-color: var(--rule); }
+.hms-bed.is-critical { background: var(--critical); border-color: var(--critical); }
+.hms-bed.is-caution  { background: var(--caution);  border-color: var(--caution); }
+.hms-bed.is-blocked  { background: repeating-linear-gradient(45deg, var(--inert-bg), var(--inert-bg) 2px, var(--inert-rule) 2px, var(--inert-rule) 4px); border-color: var(--inert-rule); }
+
+/* ================================================ 13. TABS AND PAGINATION */
+
+.nav-pills .nav-link,
+.nav-tabs .nav-link {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-2);
+    border-radius: var(--radius);
+    padding: 7px 14px;
+    border: 1px solid transparent;
+}
+.nav-pills .nav-link:hover,
+.nav-tabs .nav-link:hover { background: var(--surface-2); color: var(--ink); }
+.nav-pills .nav-link.active {
+    background: var(--action-bg) !important;
+    color: var(--action-2) !important;
+    border-color: var(--action-rule);
+}
+.nav-tabs { border-bottom: 1px solid var(--rule); }
+.nav-tabs .nav-link.active {
+    background: var(--surface) !important;
+    color: var(--ink) !important;
+    border-color: var(--rule) var(--rule) var(--surface);
+}
+
+.page-item.active .page-link {
+    background: var(--action) !important;
+    border-color: var(--action) !important;
+    color: #fff !important;
+}
+.page-link {
+    color: var(--ink-2);
+    background: var(--surface);
+    border-color: var(--rule);
+    font-size: 12.5px;
+}
+.page-link:hover { background: var(--surface-2); color: var(--ink); }
+
+/* DataTables chrome, so the toolbar reads as part of the page rather than as
+   a plugin bolted onto it. */
+.dataTables_wrapper .dt-buttons .btn {
+    background: var(--surface) !important;
+    border: 1px solid var(--rule) !important;
+    color: var(--ink-2) !important;
+    font-size: 12.5px;
+}
+.dataTables_wrapper .dataTables_filter input {
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: var(--radius);
+    padding: 5px 10px;
+}
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter { color: var(--ink-3); font-size: 12.5px; }
+.dataTables_wrapper .dataTables_length select { min-height: 28px; padding: 2px 6px; }
+
+/* ==================================================== 14. NIGHT PATCHES ===
+   The admin theme hardcodes a handful of whites and near-blacks that the
+   token layer cannot reach, and Bootstrap's colour utilities are absolute by
+   design. These are the ones that actually show up on these screens.
+   ------------------------------------------------------------------------ */
+
+html[data-theme="night"] .card-header,
+html[data-theme="night"] .modal-header,
+html[data-theme="night"] .modal-footer { background: var(--surface-2) !important; }
+
+html[data-theme="night"] .text-dark,
+html[data-theme="night"] .text-black { color: var(--ink) !important; }
+
+html[data-theme="night"] .table { background: var(--surface); }
+html[data-theme="night"] .table-striped tbody tr:nth-of-type(odd) { background: var(--surface-2); }
+/* The mark is a JPEG on a white ground and the rail brand box is white to
+   suit it. In a dark room that box is the brightest thing on screen, so it is
+   knocked back rather than left glowing. */
+html[data-theme="night"] .rail-brand__box {
+    background: #E7ECF4;
+    border-color: transparent;
+    opacity: .82;
+}
+
+/* ====================================================== 15. THE FLOOR === */
+
+a { color: var(--action); }
+a:hover { color: var(--action-2); }
+
+:focus-visible {
+    outline: 2px solid var(--action);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+html[data-theme="night"] :focus-visible { outline-color: var(--action-2); }
+
+/* Skipped-over links inside the chrome chrome need their own focus colour
+   to stay visible against a dark ground. */
+#page-topbar :focus-visible,
+.topnav :focus-visible { outline-color: var(--on-chrome-hi); }
+
+.footer { background: transparent; border-top: 1px solid var(--rule); }
+.footer .copyright p { color: var(--ink-3); font-size: 12.5px; }
+
+/* Bootstrap 4 ships no gap utility and these pages set spacing inline. */
+.hms-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+@media (max-width: 767.98px) {
+    .hms-page { align-items: flex-start; flex-direction: column; gap: 10px; }
+    .hms-page__title { font-size: 18px; }
+    .card-body { padding: 14px !important; }
+    .table { font-size: 12.5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* A screen printed straight from the browser — a worklist taken to the ward —
+   should not carry the chrome with it. */
+@media print {
+    #page-topbar, .topnav, .footer, .hms-page__actions,
+    .dataTables_wrapper .dt-buttons, .dataTables_paginate { display: none !important; }
+    .content-body { margin-left: 0 !important; padding-top: 0 !important; }
+    .card { border: 1px solid #999 !important; box-shadow: none !important; break-inside: avoid; }
+    body { background: #fff !important; font-size: 11px; }
+}
+
+/* ============================================ 16. LEGACY COLOUR UTILITIES */
+/*
+   style.css ships Bootstrap's colour utilities in the purchased theme's own
+   palette: #673BB7 purple for .bg-secondary, #50E3C2 mint for .bg-info,
+   #FF1616 for .bg-danger, #009ef7 for .bg-primary. Pages across this app
+   reach for them as decoration, which is precisely the noise this system
+   exists to remove.
+
+   They are remapped onto the state ramp, so a coloured block still means the
+   state its class names — and so night mode reaches them. Every one of these
+   is !important in style.css, so these have to be too.
+*/
+.bg-primary   { background-color: var(--info) !important; }
+.bg-info      { background-color: var(--info) !important; }
+.bg-success   { background-color: var(--ok) !important; }
+.bg-danger    { background-color: var(--critical) !important; }
+.bg-warning   { background-color: var(--caution) !important; }
+.bg-secondary { background-color: var(--inert) !important; }
+/* .bg-dark is nearly always paired with .text-white. It used to map to the
+   chrome token, which was fine while the chrome was graphite -- now that the
+   rail is white it would have rendered white-on-white. It gets its own fixed
+   dark neutral, which reads the same in both modes. */
+.bg-dark      { background-color: #2B3440 !important; }
+.bg-white     { background-color: var(--surface) !important; }
+.bg-light     { background-color: var(--surface-2) !important; }
+
+.text-primary { color: var(--info) !important; }
+.text-info    { color: var(--info) !important; }
+.text-success { color: var(--ok) !important; }
+.text-danger  { color: var(--critical) !important; }
+.text-warning { color: var(--caution) !important; }
+
+/* .bootstrap-select .btn-light inherits `color: #fff !important` from
+   style.css while leftbar.php forces its background white — white on white.
+   The colour above in section 8 settles it; this keeps the caret visible. */
+.bootstrap-select .btn-light .filter-option { color: var(--ink) !important; }
+
+/* Chrome repaints an autofilled field in its own pale blue, which is
+   unreadable in night mode. background-color is ignored on those fields; a
+   large inset shadow is the only way to cover it. */
+.form-control:-webkit-autofill,
+.form-control:-webkit-autofill:hover {
+    -webkit-text-fill-color: var(--ink);
+    box-shadow: 0 0 0 1000px var(--surface) inset !important;
+    caret-color: var(--ink);
+}
+.form-control:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--ink);
+    box-shadow: 0 0 0 1000px var(--surface) inset, 0 0 0 3px var(--action-ring) !important;
+}
+
+/* --------------------------------------------------- night: button contrast
+   The night action teal (#3AA79C) is light. White text on it measures about
+   3:1, under the 4.5:1 a 13px label needs; the same fill with near-black text
+   reaches 5.8:1 and still reads as the brightest control on the screen. The
+   state fills lift in night for the same reason and need the same treatment.
+   ------------------------------------------------------------------------ */
+html[data-theme="night"] .btn-primary,
+html[data-theme="night"] .btn-success,
+html[data-theme="night"] .btn-info,
+html[data-theme="night"] .btn-warning,
+html[data-theme="night"] .btn-danger,
+html[data-theme="night"] .page-item.active .page-link {
+    color: #0B0E12 !important;
+    font-weight: 600;
+}
+html[data-theme="night"] .btn-outline-success:hover,
+html[data-theme="night"] .btn-outline-primary:hover,
+html[data-theme="night"] .btn-outline-danger:hover { color: #0B0E12; font-weight: 600; }
+
+/* ================================================ 17. TINTED STAT TILES ===
+   The most recognisable thing on the Nexenstial dashboard is a row of stat
+   tiles in flat pastel fills rather than white cards. These are opt-in
+   modifiers so no existing page changes on its own: add one to a .card.
+
+     <div class="card hms-tile hms-tile--saffron">
+       <div class="card-body">
+         <p class="hms-stat__label">OP today</p>
+         <h2 class="hms-stat__value">42</h2>
+       </div>
+     </div>
+
+   The fills are their -100 steps, which are pale enough that --ink still
+   clears 10:1 on every one of them. They carry no border and no shadow,
+   exactly as theirs do -- the fill is the edge.
+   ------------------------------------------------------------------------ */
+.hms-tile {
+    border: 0 !important;
+    box-shadow: none !important;
+}
+.hms-tile--herb    { background: #D3E5F6 !important; }  /* herb-100 */
+.hms-tile--saffron { background: #F5E4C2 !important; }  /* saffron-100 */
+.hms-tile--leaf    { background: #E0EDE1 !important; }  /* leaf-100 */
+.hms-tile--clay    { background: #F1DED7 !important; }  /* clay-100 */
+.hms-tile--vata    { background: #E7E9F4 !important; }  /* vata-100 */
+.hms-tile--kapha   { background: #DCEDEB !important; }  /* kapha-100 */
+
+.hms-tile .hms-stat__label { color: var(--ink-2); }
+.hms-tile .hms-stat__value { color: var(--ink-head); }
+
+/* At night the pastels would glow, so the tiles fall back to the deep end of
+   each ramp with the label carrying the hue instead of the ground. */
+html[data-theme="night"] .hms-tile--herb    { background: #14283F !important; }
+html[data-theme="night"] .hms-tile--saffron { background: #33260C !important; }
+html[data-theme="night"] .hms-tile--leaf    { background: #16301D !important; }
+html[data-theme="night"] .hms-tile--clay    { background: #3A1F17 !important; }
+html[data-theme="night"] .hms-tile--vata    { background: #1C2436 !important; }
+html[data-theme="night"] .hms-tile--kapha   { background: #122E2C !important; }
+html[data-theme="night"] .hms-tile .hms-stat__value { color: var(--ink); }
+
+/* The circular icon chip their tiles lead with. */
+.hms-tile__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, .65);
+    color: var(--ink-head);
+    font-size: 16px;
+    margin-bottom: 12px;
+}
+html[data-theme="night"] .hms-tile__icon { background: rgba(255, 255, 255, .1); }
+
+/* ================================================== 18. THE TOPBAR SHELL ===
+   Rebuilt to their composition: a three-zone bar, search on the left, the
+   installation name and working year in the centre, actions on the right.
+   Their metrics, measured off the demo: 56px bar, 36px controls, pill search
+   with a 1px sand border on a 60%-opacity ground.
+   ------------------------------------------------------------------------ */
+
+#page-topbar .navbar-header {
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+    height: var(--topbar-h);
+    padding: 0 12px;
+    max-width: none;
+}
+
+.hms-bar { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.hms-bar--left   { justify-self: start; flex: 1 1 auto; }
+.hms-bar--centre { justify-self: center; gap: 8px; text-decoration: none; }
+.hms-bar--centre:hover { text-decoration: none; }
+.hms-bar--right  { justify-self: end; }
+
+.hms-bar__title {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    color: var(--ink-head);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hms-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--on-chrome-hi);
+    background: var(--chrome-3);
+    border-radius: var(--radius-pill);
+    padding: 2px 8px;
+    white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ the search */
+.hms-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 345px;
+    height: 36px;
+    padding: 0 12px;
+    background: var(--chrome-field);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-pill);
+    transition: border-color .12s ease, box-shadow .12s ease;
+}
+.hms-search:focus-within {
+    border-color: var(--action);
+    box-shadow: 0 0 0 3px var(--action-ring);
+}
+.hms-search__icon { font-size: 16px; color: var(--ink-4); flex: 0 0 auto; }
+.hms-search__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    font-family: var(--font-ui);
+    font-size: 13.5px;
+    color: var(--ink);
+    padding: 0;
+}
+.hms-search__input:focus { outline: none; }
+.hms-search__input::placeholder { color: var(--ink-4); }
+.hms-search__input::-webkit-search-cancel-button { opacity: .5; }
+.hms-search__kbd {
+    flex: 0 0 auto;
+    font-family: var(--font-id);
+    font-size: 10px;
+    letter-spacing: .02em;
+    color: var(--ink-4);
+    background: var(--surface-2);
+    border: 1px solid var(--rule-2);
+    border-radius: 5px;
+    padding: 2px 6px;
+}
+
+/* ---------------------------------------------------------- bar controls */
+#page-topbar .hms-icon-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-pill) !important;
+    background: transparent !important;
+    border: 0 !important;
+    color: var(--on-chrome) !important;
+    font-size: 18px;
+}
+#page-topbar .hms-icon-btn:hover { background: var(--chrome-2) !important; color: var(--on-chrome-hi) !important; }
+
+#page-topbar .hms-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    border-radius: var(--radius-pill) !important;
+    background: var(--action) !important;
+    border: 1px solid var(--action) !important;
+    color: #fff !important;
+    font-size: 13px;
+    font-weight: 600;
+}
+#page-topbar .hms-add:hover { background: var(--action-2) !important; border-color: var(--action-2) !important; }
+html[data-theme="night"] #page-topbar .hms-add { color: #0B0E12 !important; }
+
+#page-topbar .hms-user {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 8px 0 4px;
+    border-radius: var(--radius-pill) !important;
+    background: transparent !important;
+    border: 0 !important;
+    color: var(--on-chrome) !important;
+}
+#page-topbar .hms-user:hover { background: var(--chrome-2) !important; }
+
+.hms-user__avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    border-radius: var(--radius-pill);
+    background: var(--chrome-3);
+    color: var(--on-chrome-hi);
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+}
+.hms-user__meta { flex-direction: column; align-items: flex-start; line-height: 1.15; min-width: 0; }
+.hms-user__name { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+.hms-user__role { font-size: 11px; color: var(--ink-3); }
+
+/* leftbar.php carries an inline `.content-body .container-fluid { margin-top:
+   50px }` from before the bar had a token height. Tied to the token so the two
+   cannot drift apart. */
+.content-body .container-fluid { margin-top: var(--topbar-h) !important; }
+
+/* Their header is translucent with a backdrop blur. That is deliberately NOT
+   copied: backdrop-filter on a bar fixed over a scrolling worklist repaints a
+   blurred layer continuously, and these screens run all shift on modest ward
+   machines. It was measurably expensive enough here to stall a screenshot
+   capture twice. --chrome-veil is within 15% of --chrome, so an opaque bar is
+   visually near-identical and free. To take the effect back, set the
+   background to var(--chrome-veil) and add backdrop-filter: blur(8px). */
+#page-topbar {
+    background: var(--chrome) !important;
+}
+
+/* A little air under the bar, matching the gap their dashboard leaves. */
+.content-body .container-fluid { margin-top: calc(var(--topbar-h) + 10px) !important; }
+
+/* Their title is `hidden md:flex` -- on a phone the bar carries the search and
+   the actions only, and the centre zone is dropped rather than squeezed. */
+@media (max-width: 767.98px) {
+    #page-topbar .navbar-header { grid-template-columns: 1fr auto; }
+    .hms-bar--centre { display: none; }
+    .hms-search { max-width: none; }
+    .hms-search__kbd { display: none; }
+}
+
+/* =============================================== 19. PROCESS SCREENS ======
+   The ABHA screens are not lists, they are procedures: find a patient,
+   verify them, then do the thing. They were laid out as two side-by-side
+   panels with the right one empty until the left one succeeded, which left
+   most of the screen dead and gave no sense of where you were in the job.
+
+   These three pieces make a procedure legible:
+
+     .hms-steps      where you are, and what is still to come
+     .hms-searchbar  the one input that starts everything, full width
+     .hms-split      the result, once there is one
+
+   Used by createAabha.php, careContextLink.php and fetchHealthRecords.php.
+   ------------------------------------------------------------------------ */
+
+.hms-steps {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    padding: 12px 18px;
+    margin-bottom: 16px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+}
+
+.hms-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 4px 10px 4px 4px;
+    border-radius: var(--radius-pill);
+    min-width: 0;
+}
+
+.hms-step__num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    border-radius: 50%;
+    background: var(--surface-3);
+    color: var(--ink-3);
+    font-family: var(--font-display);
+    font-size: 11.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.hms-step__label {
+    font-family: var(--font-ui);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--ink-3);
+    white-space: nowrap;
+}
+
+/* The step you are on. */
+.hms-step.is-current { background: var(--action-bg); }
+.hms-step.is-current .hms-step__num { background: var(--action); color: #fff; }
+.hms-step.is-current .hms-step__label { color: var(--action-2); font-weight: 600; }
+html[data-theme="night"] .hms-step.is-current .hms-step__num { color: #0B0E12; }
+
+/* Steps already behind you. */
+.hms-step.is-done .hms-step__num { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok-rule); }
+.hms-step.is-done .hms-step__label { color: var(--ink-2); }
+
+.hms-step__rule {
+    flex: 1 1 20px;
+    min-width: 16px;
+    height: 1px;
+    background: var(--rule);
+}
+
+@media (max-width: 767.98px) {
+    .hms-step__rule { display: none; }
+    .hms-step__label { white-space: normal; }
+}
+
+/* ------------------------------------------------------------ search bar
+   The single row that starts the job, full width rather than trapped in a
+   narrow left column. */
+.hms-searchbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+}
+.hms-searchbar__label {
+    font-family: var(--font-display);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    flex: 0 0 auto;
+}
+.hms-searchbar > .form-control,
+.hms-searchbar > select { flex: 0 1 190px; }
+.hms-searchbar__grow { flex: 1 1 220px; min-width: 0; }
+
+/* ---------------------------------------------------------------- result
+   Two columns only once there is something to put in them: a summary of who
+   this is on the left, and the work on the right. */
+.hms-split {
+    display: grid;
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+@media (max-width: 991.98px) {
+    .hms-split { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ============================================ 20. LEGACY SHELL SUPPORT ===
+   leftbar.php was rebuilt around a three-zone topbar with the mark in the
+   rail, and the .navbar-brand-box rules were removed with it. But the billing
+   module keeps its own copy of the old shell (billing/leftbar.php, used by
+   sixty screens) and still renders .navbar-brand-box and .header-item. With
+   the brand rules gone those screens got an unstyled 50px logo on a bare bar.
+
+   This block styles the old shell so it reads as part of the system until it
+   is ported. It targets only markup the new shell no longer emits, so the two
+   cannot collide.
+   ------------------------------------------------------------------------ */
+
+#page-topbar .navbar-brand-box {
+    display: flex;
+    align-items: center;
+    height: var(--topbar-h);
+    padding: 0 14px;
+    background: var(--chrome);
+}
+#page-topbar .navbar-brand-box img { height: 28px !important; width: auto; }
+
+#page-topbar .header-item {
+    color: var(--on-chrome) !important;
+    height: var(--topbar-h);
+    border: 0;
+    box-shadow: none !important;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    background: transparent !important;
+}
+#page-topbar .header-item:hover,
+#page-topbar .header-item:focus {
+    background: var(--chrome-2) !important;
+    color: var(--on-chrome-hi) !important;
+}
+#page-topbar .header-profile-user {
+    height: 26px;
+    width: 26px;
+    border: 1px solid var(--rule);
+}
+
+/* The old shell put the hospital name in a Bootstrap .h4. */
+#page-topbar .navbar-header > .h4 {
+    font-family: var(--font-display) !important;
+    font-size: 13.5px !important;
+    font-weight: 600;
+    letter-spacing: .04em;
+    color: var(--ink-head) !important;
+    margin: 0;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* The mark is a JPEG on white; on the dark night bar it needs a chip. */
+html[data-theme="night"] #page-topbar .navbar-brand-box img {
+    background: #fff;
+    border-radius: 2px;
+    padding: 2px 4px;
+    opacity: .9;
+}

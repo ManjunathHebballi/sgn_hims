@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admission Report</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    body {
+      /* background: #fff; */
+      font-size: 13px;
+      padding: 15px;
+    }
+    .a4-sheet {
+      width: 210mm;
+      min-height: 297mm;
+      margin: auto;
+      padding: 20mm;
+     
+    }
+    .form-title {
+      text-align: center;
+      font-weight: bold;
+      font-size: 16px;
+      text-transform: uppercase;
+    }
+    .sub-title {
+      text-align: center;
+      font-size: 13px;
+    }
+    .section-title {
+      font-weight: bold;
+      margin-top: 15px;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      font-size: 14px;
+    }
+    .line-input {
+      border-bottom: 1px solid #000;
+      display: inline-block;
+      min-width: 100px;
+      padding: 2px;
+    }
+    textarea {
+      border: 1px solid #000 !important;
+    }
+    .result-box input {
+      margin-right: 4px;
+      margin-left: 10px;
+    }
+
+    /* Print setup */
+    @page {
+      size: A4;
+      margin: 5mm;
+    }
+    @media print {
+      body {
+        margin: 0;
+        background: #fff;
+      }
+      .a4-sheet {
+        border: none;
+        margin: 0;
+        padding: 0;
+        width: auto;
+        min-height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="a4-sheet">
+   
+  
+  <table class="table table-bordered">
+    <tbody>
+        <tr>
+            <td colspan="3" class="text-center">
+                 <h5 class="form-title">KANACHUR HOSPITAL & RESEARCH CENTRE</h5>
+  <p class="sub-title">University Road, Deralakatte Mangalore - 575018 <br> Ph: 0824-2888000</p>
+  <h6 class="text-center fw-bold mb-3">ADMISSION REPORT</h6>
+
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3" width="100%">
+                <!-- Patient Info -->
+  <div class="row mb-3">
+    <div class="col-6">Patient’s Name: <span class="line-input"><strong>Mr. RITHESH</strong></span></div>
+    <div class="col-3">Age: <span class="line-input"><strong>30Y</strong></span></div>
+    <div class="col-3">Sex: <span class="line-input"><strong>MALE</strong></span></div>
+  </div>
+
+  
+
+  <div class="mb-3">
+  Marital Status: 
+    <span class="result-box">
+      <input type="checkbox"> Married
+      <input type="checkbox"> Single
+      <input type="checkbox"> Widow
+      <input type="checkbox"> Divorcee
+     
+    </span>
+  </div>
+ 
+
+  <div class="row mb-3">
+    <div class="col-4">Department: <span class="line-input"><strong>MEDICINE</strong></span></div>
+    <div class="col-4">UHID No: <span class="line-input"><strong>202508130139</strong></span></div>
+    <div class="col-4">IP No: <span class="line-input"><strong>IP25-298360</strong></span></div>
+  </div>
+
+  <div class="row mb-3 mt-2">
+    <div class="col-6">Ward: <span class="line-input">MEDICINE - MALE</span></div>
+    <div class="col-6">Bed No: <span class="line-input">148</span></div>
+  </div>
+
+  <div class="mb-3">Father’s/Husband’s Name: <span class="line-input">MAHABALA</span></div>
+
+  <div class="mb-3">Address: <span class="line-input">Varkady Padav, Manjeshwara, Kasargod</span></div>
+<div class="d-flex  flex-row  mb-3">
+    <div class="col-3">Tel.No. <span class="line-input"></span></div>
+    <div class="col-3">Off : <span class="line-input"></span></div>
+    <div class="col-3">Mobile: <span class="line-input"></span></div>
+    <div class="col-3">Pin Code: <span class="line-input"></span></div>
+
+  </div>
+  <div class="row mb-3">
+    <div class="col-12">Occupation: <span class="line-input"></span></div>
+    <div class="mb-3 mt-3">
+Religion: 
+    <span class="result-box">
+      <input type="checkbox"> Hindu
+      <input type="checkbox"> Christian
+      <input type="checkbox"> Muslim
+      <input type="checkbox"> Other
+     
+    </span>
+  </div>
+   
+  </div>
+
+  <div class="mb-3">Admitting Doctor: <span class="line-input"><strong>Dr. PRASHANTH KUMAR K</strong></span></div>
+
+  <div class="row mb-3">
+    <div class="col-6">Date & Time of Admission: <span class="line-input"><strong>13-08-2025 12:30 PM</strong></span></div>
+    <div class="col-6">No of Hosp Days: <span class="line-input"></span></div>
+  </div>
+
+  <div class="row mb-3">
+    <div class="col-6">Date & Time of Discharge: <span class="line-input"></span></div>
+    <div class="col-6">Signature of Patient/Relative: <span class="line-input"></span></div>
+  </div>
+
+  
+  
+</td>
+        </tr>
+        <tr>
+            <th colspan="2" width="30%">
+                Exclusive for Doctors Use Only
+            </th>
+        <th>
+               Internation Code No (ICD)
+            </th>
+        </tr>
+        <tr>
+            <td height="40px">Admission Diagnosis</td>
+            <td width="35%"></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td height="80px">Final Diagnosis</td>
+            <td width="35%"></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td height="80px">Operation / Procedures with dates</td>
+            <td width="35%"></td>
+            <td></td>
+        </tr>
+
+        <tr>
+            <td colspan="3">
+                  <div class="mb-3">
+<strong>
+    Result :
+</strong>
+    <span class="result-box">
+      <input type="checkbox"> Recovered/ Cured
+          <input type="checkbox"> Improved
+      <input type="checkbox"> Referred
+      <input type="checkbox"> Expired
+      <input type="checkbox"> Absconded
+      <input type="checkbox"> DAMA
+
+
+     
+    </span>
+  </div>
+            </td>
+        </tr>
+ 
+            
+    </tbody>
+  </table>
+   <div class="row mt-5">
+    <div class="col-6"><strong>Operator:</strong> <span class="line-input">tiki</span></div>
+    <div class="col-6 text-end"><strong>Signature of Unit Chief:</strong> </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y" crossorigin="anonymous"></script>
+</body>
+</html>

@@ -1,0 +1,705 @@
+/* ===========================================================================
+   SGN HMS — navigation rail
+   ---------------------------------------------------------------------------
+   Turns the horizontal menu in leftbar.php into a fixed left rail.
+
+   The menu markup is left almost exactly as it is — roughly 1,400 lines of
+   role blocks, each an <li class="nav-item dropdown"> holding a Bootstrap
+   <div class="dropdown-menu">. Rewriting that would be a large and risky edit
+   for a visual change, so the conversion is done in CSS against the existing
+   structure:
+
+     .topnav                  the fixed top bar   -> fixed left column
+     ul.navbar-nav            a horizontal row    -> a vertical stack
+     .dropdown-menu           a floating popup    -> an inline accordion panel
+     .content-body / .footer  full width          -> shifted right
+
+   Two things are added to the markup, both at the top of the rail and both
+   optional to the menu itself (see leftbar.php): a role identity block, and a
+   filter field. The filter is the reason the rail can stay a flat list — a
+   Store or Lab Admin role carries well over a hundred destinations, and
+   typing three letters beats opening four accordions to find "GRN".
+
+   The rail is achromatic by design. Every saturated colour in this interface
+   means a clinical state (see hms-theme.css), so the chrome gives up colour
+   to keep that ramp exclusive. Nothing in here is coloured except the active
+   marker, which uses the action teal.
+
+   Loaded from leftbar.php after css/style.css and before hms-theme.css.
+   Several rules need !important: the Bootstrap flex utilities on the <ul> are
+   themselves !important, and Popper writes inline position/transform onto an
+   open .dropdown-menu.
+
+   Below 992px the rail becomes a normal collapsible block driven by the
+   hamburger already in the markup — so no new JavaScript for layout.
+   =========================================================================== */
+
+:root {
+    /* --rail-w, --topbar-h, --chrome* and --action come from hms-theme.css.
+       Fallbacks are given at every use so the rail still lays out correctly
+       if the theme file is ever removed. */
+    --rail-pad: 16px;
+}
+
+/* ---------------------------------------------------------------- desktop */
+@media (min-width: 992px) {
+
+    /* The bar itself becomes the column. */
+    .topnav {
+        position: fixed !important;
+        top: var(--topbar-h, 50px) !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: auto !important;
+        width: var(--rail-w, 264px) !important;
+        margin-top: 0 !important;
+        padding: 0 !important;
+        background: var(--chrome, #1A1D23) !important;
+        border-right: 1px solid var(--chrome-rule);
+        box-shadow: none !important;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        z-index: 1001;
+    }
+
+    /* Strip the container/nav padding that assumed a horizontal bar. */
+    .topnav .container-fluid,
+    .topnav .navbar {
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+        width: 100% !important;
+    }
+
+    /* .navbar-expand-lg forces display:flex on the collapse at this width. */
+    .topnav .navbar-collapse {
+        display: block !important;
+        width: 100% !important;
+    }
+
+    /* The row of menus becomes the stack. Bootstrap's justify-content-around
+       and d-flex are !important, hence the overrides. */
+    .topnav ul.navbar-nav {
+        display: block !important;
+        flex-direction: column !important;
+        flex-wrap: nowrap !important;
+        justify-content: flex-start !important;
+        width: 100% !important;
+        padding: 6px 0 40px !important;
+        margin: 0 !important;
+    }
+
+    .topnav ul.navbar-nav > li {
+        width: 100% !important;
+        display: block !important;
+        position: relative;
+    }
+
+    /* Top-level entries, at their measured values: 13px/500 in ink-soft, a
+       35.5px row inset 4px from the rail edge, and a 14px radius -- NOT a full
+       pill. In their rail the pill is reserved for the screen you are actually
+       on, which is a different thing from a group being open. */
+    .topnav ul.navbar-nav > li > .nav-link {
+        display: flex !important;
+        align-items: center;
+        gap: 8px;
+        width: auto;
+        margin: 2px 4px;
+        padding: 8px 12px !important;
+        border-radius: 14px;
+        color: var(--on-chrome, #49576B) !important;
+        font-family: var(--font-ui, sans-serif);
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.35;
+        white-space: normal;
+        border-left: 0;
+        transition: background .12s ease, color .12s ease;
+    }
+
+    .topnav ul.navbar-nav > li > .nav-link:hover,
+    .topnav ul.navbar-nav > li > .nav-link:focus {
+        background: var(--chrome-2, #262A32) !important;
+        color: var(--on-chrome-hi, #fff) !important;
+    }
+
+    .topnav ul.navbar-nav > li > .nav-link i {
+        font-size: 16px;
+        width: 20px;
+        flex: 0 0 20px;
+        text-align: center;
+        color: var(--on-chrome-dim, #838C9B);
+        margin: 0 !important;
+    }
+    .topnav ul.navbar-nav > li > .nav-link:hover i { color: var(--on-chrome-hi, #fff); }
+
+    .topnav .nav-text { flex: 1 1 auto; }
+
+    /* An OPEN group is not a highlighted group. In their rail the header of an
+       expanded group stays plain — only its chevron turns — and the filled pill
+       is reserved for the screen you are on. Filling the header as well made two
+       different things look identical. */
+    .topnav ul.navbar-nav > li.dropdown.show > .nav-link,
+    .topnav ul.navbar-nav > li.dropdown > .nav-link[aria-expanded="true"] {
+        background: transparent !important;
+        color: var(--on-chrome-hi, #1E4A7E) !important;
+        font-weight: 600;
+        border-left-color: transparent;
+    }
+
+    /* The screen you are actually on. Set by leftbar.php from the address bar,
+       on the sub-item and on its group. */
+    .topnav ul.navbar-nav .is-current,
+    .topnav .dropdown-menu .dropdown-item.is-current {
+        background: var(--chrome-3, #D3E5F6) !important;
+        color: var(--on-chrome-hi, #1E4A7E) !important;
+        font-weight: 600;
+    }
+
+    /* The submenu drops inline instead of floating. Popper sets position and
+       transform inline on an open menu, so both have to be forced. */
+    .topnav .dropdown-menu {
+        position: static !important;
+        transform: none !important;
+        float: none !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-height: none !important;
+        margin: 0 !important;
+        padding: 2px 0 6px !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        overflow: visible !important;
+        font-size: 12.5px;
+    }
+
+    .topnav .dropdown-menu .dropdown-item {
+        margin: 2px 4px;
+        padding: 8px 12px 8px 28px !important;
+        gap: 12px;
+        color: var(--on-chrome-dim, #5C6A7D) !important;
+        font-size: 12.5px;
+        line-height: 1.35;
+        white-space: normal;
+        border-left: 0;
+        border-radius: var(--radius-pill, 9999px) !important;
+        transition: background .12s ease, color .12s ease;
+    }
+
+    .topnav .dropdown-menu .dropdown-item:hover,
+    .topnav .dropdown-menu .dropdown-item:focus {
+        background: var(--chrome-3, #D3E5F6) !important;
+        color: var(--on-chrome-hi, #1E4A7E) !important;
+    }
+
+    /* The theme's right-aligned dropdown offset makes no sense in a column. */
+    .topnav .dropdown-menu-right {
+        transform: none !important;
+        right: auto !important;
+    }
+
+    /* Make room for the column. leftbar.php is included as a sibling of
+       .content-body inside #main-wrapper, so both shift together. */
+    .content-body,
+    .footer {
+        margin-left: var(--rail-w, 264px) !important;
+    }
+
+    /* A slim scrollbar, so a hundred-entry role menu does not get a heavy
+       native one eating the rail width. */
+    .topnav::-webkit-scrollbar { width: 6px; }
+    .topnav::-webkit-scrollbar-track { background: transparent; }
+    .topnav::-webkit-scrollbar-thumb {
+        background: var(--chrome-scroll);
+        border-radius: 3px;
+    }
+    .topnav::-webkit-scrollbar-thumb:hover { background: var(--on-chrome-dim); }
+    .topnav { scrollbar-width: thin; scrollbar-color: var(--chrome-scroll) transparent; }
+}
+
+/* --------------------------------------------------------- rail furniture
+   The two blocks added to leftbar.php, styled once for both breakpoints.
+
+   The role badge is set in the identifier mono face, the same treatment a
+   UHID gets in the content area. That is deliberate: which role you are
+   signed in as decides what this menu contains and what you are permitted to
+   do, so it is an identifier, and it is worth being able to check at a glance
+   before you start entering records against the wrong login.
+   ------------------------------------------------------------------------ */
+
+.rail-id {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 14px var(--rail-pad) 12px;
+    border-bottom: 1px solid var(--chrome-rule);
+}
+
+.rail-id__role {
+    align-self: flex-start;
+    font-family: var(--font-id, monospace);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--on-chrome-hi, #fff);
+    background: var(--chrome-badge);
+    border: 1px solid var(--chrome-badge-rule);
+    border-radius: 3px;
+    padding: 2px 7px;
+}
+
+.rail-id__name {
+    font-family: var(--font-ui, sans-serif);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--on-chrome, #C7CCD6);
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.rail-filter { padding: 10px var(--rail-pad); }
+
+.rail-filter__input {
+    width: 100%;
+    font-family: var(--font-ui, sans-serif);
+    font-size: 12.5px;
+    color: var(--on-chrome-hi, #fff);
+    background: var(--chrome-field);
+    border: 1px solid var(--chrome-field-rule);
+    border-radius: 3px;
+    padding: 6px 10px;
+    transition: border-color .12s ease, background .12s ease;
+}
+.rail-filter__input::placeholder { color: var(--on-chrome-dim, #838C9B); }
+.rail-filter__input:focus {
+    outline: none;
+    background: var(--chrome-field);
+    border-color: var(--action, #0E6E66);
+    box-shadow: 0 0 0 3px var(--action-ring);
+}
+/* The native clear affordance is drawn dark; it only needs inverting once the
+   rail itself goes dark. */
+.rail-filter__input::-webkit-search-cancel-button { opacity: .55; }
+html[data-theme="night"] .rail-filter__input::-webkit-search-cancel-button { filter: invert(1); }
+
+/* An empty result has to say so, or the rail just looks broken. */
+.rail-empty {
+    margin: 0;
+    padding: 4px var(--rail-pad) 14px;
+    font-size: 12.5px;
+    color: var(--on-chrome-dim, #838C9B);
+}
+
+/* Set by the filter script in leftbar.php.
+
+   The desktop block above sets `display: block !important` on
+   `.topnav ul.navbar-nav > li` (0,2,2) to undo Bootstrap flex utilities, which
+   outranks a bare `.rail-hidden` (0,1,0) — so a filtered-out group stayed
+   visible while its items vanished. These selectors are specific enough to
+   win. */
+.topnav ul.navbar-nav > li.rail-hidden,
+.topnav .dropdown-menu .dropdown-item.rail-hidden,
+.rail-hidden { display: none !important; }
+
+/* While filtering, matched entries are shown flat — every group open, no
+   accordion to work through, which is the whole point of typing. */
+.topnav.is-filtering .dropdown-menu {
+    display: block !important;
+    background: transparent !important;
+}
+.topnav.is-filtering ul.navbar-nav > li.dropdown > .dropdown-toggle::after { opacity: .3; }
+
+/* ----------------------------------------------------------------- mobile */
+/* Below the breakpoint the rail returns to a stacked block that the existing
+   hamburger (data-target="#topnav-menu-content") shows and hides. */
+@media (max-width: 991.98px) {
+
+    .topnav {
+        position: fixed !important;
+        top: var(--topbar-h, 50px) !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: auto !important;
+        margin-top: 0 !important;
+        max-height: calc(100vh - var(--topbar-h, 50px));
+        overflow-y: auto;
+        background: var(--chrome, #1A1D23) !important;
+        z-index: 1001;
+    }
+
+    .topnav ul.navbar-nav {
+        display: block !important;
+        width: 100% !important;
+        padding: 4px 0 20px !important;
+    }
+
+    .topnav ul.navbar-nav > li { width: 100% !important; }
+
+    .topnav ul.navbar-nav > li > .nav-link {
+        display: flex !important;
+        align-items: center;
+        gap: 10px;
+        padding: 11px var(--rail-pad) !important;
+        color: var(--on-chrome, #C7CCD6) !important;
+        font-size: 14px;
+    }
+
+    .topnav ul.navbar-nav > li > .nav-link i {
+        width: 20px;
+        flex: 0 0 20px;
+        text-align: center;
+        color: var(--on-chrome-dim, #838C9B);
+        margin: 0 !important;
+    }
+
+    .topnav .dropdown-menu {
+        position: static !important;
+        transform: none !important;
+        float: none !important;
+        width: 100% !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        margin: 0 !important;
+    }
+
+    .topnav .dropdown-menu .dropdown-item {
+        padding: 10px var(--rail-pad) 10px 46px !important;
+        color: var(--on-chrome-dim, #838C9B) !important;
+        white-space: normal;
+    }
+
+    /* Collapsed by default; the hamburger toggles .show on the collapse. */
+    .topnav .navbar-collapse:not(.show) { display: none !important; }
+
+    .content-body,
+    .footer { margin-left: 0 !important; }
+}
+
+/* Long department names must wrap rather than clip in a fixed-width column. */
+.topnav .nav-text,
+.topnav .dropdown-item { word-break: break-word; }
+
+/* ------------------------------------------------- caret and divider ------
+   These two are identical at both breakpoints, so they live outside the media
+   queries. They were desktop-only at first, which left the phone menu showing
+   Bootstrap's default filled triangle and a bright white divider rule across
+   the dark panel.
+
+   The markup carries .arrow-none, which suppressed the theme's own indicator,
+   so the chevron is drawn here.
+   ------------------------------------------------------------------------ */
+.topnav ul.navbar-nav > li.dropdown > .dropdown-toggle::after {
+    display: inline-block !important;
+    content: "";
+    border: solid var(--on-chrome-dim, #838C9B) !important;
+    border-width: 0 1.5px 1.5px 0 !important;
+    width: 0;
+    height: 0;
+    padding: 2.5px;
+    margin-left: auto;
+    flex: 0 0 auto;
+    vertical-align: middle;
+    transform: rotate(-45deg);
+    transition: transform .18s ease;
+}
+
+/* Bootstrap sets aria-expanded on the toggle itself, which is more reliable
+   here than assuming where it puts .show. Both are matched. */
+.topnav ul.navbar-nav > li.dropdown.show > .dropdown-toggle::after,
+.topnav ul.navbar-nav > li.dropdown > .dropdown-toggle[aria-expanded="true"]::after {
+    transform: rotate(45deg) !important;
+    border-color: var(--on-chrome-hi, #fff) !important;
+}
+
+.topnav .dropdown-menu .dropdown-divider {
+    border-top: 1px solid var(--chrome-rule) !important;
+    /* Inset to the item text rather than run to the rail edge, so the rule
+       groups the entries above and below it instead of cutting the rail. */
+    margin: 6px 16px;
+}
+
+/* ==================================================== the rail furniture ===
+   Their aside is three stacked blocks: a 64px brand, a scrolling nav, and a
+   footer separated by a sand rule carrying the dark-mode switch and the
+   signed-in identity. Matched here against the same measurements.
+   ------------------------------------------------------------------------ */
+
+.rail-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 64px;
+    padding: 0 12px;
+    flex: 0 0 auto;
+    border-bottom: 1px solid var(--chrome-rule);
+}
+.rail-brand__box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    padding: 6px 12px;
+    max-width: 100%;
+}
+.rail-brand__box img { max-height: 40px; width: auto; display: block; }
+
+/* Their section label: 10px, heavy, widely tracked. */
+.rail-eyebrow {
+    margin: 0;
+    padding: 10px 14px 4px;
+    font-family: var(--font-display, sans-serif);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-4, #7B8798);
+}
+
+.rail-empty {
+    margin: 0;
+    padding: 4px 14px 12px;
+    font-size: 12.5px;
+    color: var(--on-chrome-dim, #5C6A7D);
+}
+
+/* ------------------------------------------------------------ rail footer */
+.rail-foot {
+    border-top: 1px solid var(--chrome-rule);
+    padding: 10px;
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.rail-theme {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 12px;
+    border: 0;
+    background: transparent;
+    border-radius: var(--radius-pill, 9999px);
+    color: var(--on-chrome, #49576B);
+    font-family: var(--font-ui, sans-serif);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .12s ease, color .12s ease;
+}
+.rail-theme:hover { background: var(--chrome-2); color: var(--on-chrome-hi); }
+.rail-theme__label { display: inline-flex; align-items: center; gap: 10px; }
+.rail-theme__label i { font-size: 16px; width: 20px; text-align: center; }
+
+/* The switch reads its state from aria-pressed, so the script sets one
+   attribute and the track follows. */
+.rail-switch {
+    position: relative;
+    flex: 0 0 auto;
+    width: 34px;
+    height: 18px;
+    border-radius: var(--radius-pill, 9999px);
+    background: var(--chrome-3);
+    transition: background .16s ease;
+}
+.rail-switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(16, 35, 60, .3);
+    transition: transform .16s ease;
+}
+.rail-theme[aria-pressed="true"] .rail-switch { background: var(--action); }
+.rail-theme[aria-pressed="true"] .rail-switch::after { transform: translateX(16px); }
+
+/* --------------------------------------------------------------- identity */
+.rail-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    min-width: 0;
+}
+.rail-user__avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    border-radius: 50%;
+    background: var(--chrome-3);
+    color: var(--on-chrome-hi);
+    font-family: var(--font-display, sans-serif);
+    font-size: 12px;
+    font-weight: 600;
+}
+.rail-user__meta { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.rail-user__name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink, #1A2431);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.rail-user__role { font-size: 11px; color: var(--ink-3, #5C6A7D); }
+
+/* The rail is a flex column so the footer pins to the bottom and only the
+   menu scrolls -- the same behaviour their aside has. */
+@media (min-width: 992px) {
+    .topnav {
+        display: flex !important;
+        flex-direction: column;
+        overflow: hidden !important;
+    }
+    .topnav .container-fluid,
+    .topnav .navbar {
+        display: flex !important;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+    .topnav .navbar-collapse {
+        display: flex !important;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+    .topnav ul.navbar-nav {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 0 0 8px !important;
+    }
+    .rail-foot { flex: 0 0 auto; }
+}
+
+/* Below the breakpoint the brand would sit under the topbar permanently, so
+   it is desktop-only and everything scrolls together. */
+@media (max-width: 991.98px) {
+    .rail-brand { display: none; }
+    .rail-foot { margin-top: 0; }
+}
+
+/* Bootstrap's .navbar sets align-items:center, which in a flex *column*
+   centres the brand, the eyebrow and the menu horizontally instead of letting
+   them fill the rail. */
+.topnav .navbar,
+.topnav .container-fluid,
+.topnav .navbar-collapse { align-items: stretch !important; }
+
+/* Their aside runs the full height of the window with the header sitting to
+   the right of it, rather than a full-width bar with the rail beneath. */
+@media (min-width: 992px) {
+    .topnav { top: 0 !important; }
+    #page-topbar { left: var(--rail-w) !important; }
+}
+
+
+
+/* ===================================================== collapsed rail ======
+   Their hamburger folds the aside to an icon strip. Because --rail-w is the
+   one token driving the rail width, the topbar offset and the content margin,
+   collapsing is a single custom-property change and the layout follows.
+
+   The strip does not expand on hover. An icon on its own cannot show a
+   submenu, so instead clicking a group in the collapsed rail reopens it (see
+   leftbar.php): the rail comes back and that group opens. Everything here is
+   about hiding the text while the strip is folded.
+
+   html.rail-collapsed is set before paint (see leftbar.php), so a reload never
+   shows the wide rail first.
+   ------------------------------------------------------------------------ */
+@media (min-width: 992px) {
+
+    html.rail-collapsed { --rail-w: 68px; }
+
+
+    /* Collapsed and idle: labels, caret, eyebrow and identity text go. */
+    html.rail-collapsed .topnav .nav-text,
+    html.rail-collapsed .topnav .rail-eyebrow,
+    html.rail-collapsed .topnav .rail-empty,
+    html.rail-collapsed .topnav .rail-user__meta,
+    html.rail-collapsed .topnav .rail-switch,
+    html.rail-collapsed .topnav .dropdown-menu,
+    html.rail-collapsed .topnav ul.navbar-nav > li.dropdown > .dropdown-toggle::after {
+        display: none !important;
+    }
+
+    /* "Dark mode" is a bare text node beside its icon, so it cannot be hidden
+       by selector. Collapsing the type size hides the words and the icon takes
+       its own size back. */
+    html.rail-collapsed .topnav .rail-theme__label { font-size: 0; gap: 0; }
+    html.rail-collapsed .topnav .rail-theme__label i { font-size: 16px; }
+
+    html.rail-collapsed .topnav ul.navbar-nav > li > .nav-link {
+        justify-content: center;
+        padding: 9px 0 !important;
+        margin: 2px 8px;
+        gap: 0;
+    }
+    html.rail-collapsed .topnav ul.navbar-nav > li > .nav-link i {
+        width: auto;
+        flex: 0 0 auto;
+    }
+
+    html.rail-collapsed .topnav .rail-brand { padding: 0 8px; }
+    html.rail-collapsed .topnav .rail-brand__box { padding: 4px; border-radius: 10px; }
+    html.rail-collapsed .topnav .rail-brand__box img { max-height: 26px; }
+
+    html.rail-collapsed .topnav .rail-foot { padding: 8px 6px; }
+    html.rail-collapsed .topnav .rail-theme { justify-content: center; padding: 8px 0; }
+    html.rail-collapsed .topnav .rail-user { justify-content: center; padding: 8px 0; }
+}
+
+/* There is no icon strip to fold to on a phone: the same button opens and
+   closes the menu there, so the collapsed width never applies. */
+@media (max-width: 991.98px) {
+    html.rail-collapsed { --rail-w: 240px; }
+}
+
+/* ============================================ no hover-opening submenus ===
+   The purchased theme opens a rail submenu on hover, inside its own
+   @media (min-width: 992px) block:
+
+     .topnav .dropdown:hover > .dropdown-menu          { display: block }
+     .topnav .dropdown:hover > .dropdown-menu > .dropdown:hover > .dropdown-menu
+                                                       { display: block }
+
+   That is what made the sidebar open as the pointer crossed it. At (0,4,0)
+   and (0,7,0) it also outranks Bootstrap's own .dropdown-menu { display:none },
+   so nothing quieter would have stopped it.
+
+   This rail is a click accordion: a group opens when you click its name and
+   stays open until you click it again or open another. Hover must open
+   nothing.
+   ------------------------------------------------------------------------ */
+@media (min-width: 992px) {
+    .topnav .dropdown:hover > .dropdown-menu,
+    .topnav .dropdown:hover > .dropdown-menu > .dropdown:hover > .dropdown-menu {
+        display: none;
+    }
+
+    /* ...but a group the accordion has opened must stay open even while the
+       pointer is over it, so this has to outrank the rule above. */
+    .topnav ul.navbar-nav > li.dropdown.show > .dropdown-menu,
+    .topnav ul.navbar-nav > li.dropdown > .dropdown-menu.show {
+        display: block !important;
+    }
+}

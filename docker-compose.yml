@@ -1,0 +1,69 @@
+services:
+  # PHP Apache Application
+  web:
+    build: .
+    container_name: sgn_hospital_web
+    ports:
+      - "1111:1111"
+    volumes:
+      - ./:/var/www/html:rw
+      - ./docker-data/sessions:/var/www/sessions:rw
+    environment:
+      - TZ=Asia/Kolkata
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - hospital_network
+    restart: unless-stopped
+
+  # MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: sgn_hospital_db
+    ports:
+      - "1112:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: toor
+      MYSQL_DATABASE: sgn_hospital
+      MYSQL_USER: sgn_user
+      MYSQL_PASSWORD: TXDy4iKYMtBTer2j
+      TZ: Asia/Kolkata
+    volumes:
+      # Persistent database storage on physical machine
+      - ./docker-data/mysql:/var/lib/mysql
+      # Initial database schema (if exists)
+      - ./db:/docker-entrypoint-initdb.d
+    networks:
+      - hospital_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptoor"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    command: --default-authentication-plugin=mysql_native_password --sql-mode="no_engine_substitution"
+
+  # phpMyAdmin for database management (optional)
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: sgn_hospital_phpmyadmin
+    ports:
+      - "1113:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 500M
+    depends_on:
+      - db
+    networks:
+      - hospital_network
+    restart: unless-stopped
+
+networks:
+  hospital_network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
