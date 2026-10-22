@@ -96,7 +96,7 @@ function reg_valid_date($v)
 /** Next OPD no / UHID sequence for a date, as addOP::getNextCentralOpdSequence(). */
 function reg_next_opd_seq($con, $dateKey, $column)
 {
-    $start = $column === 'uhid' ? 5 : 3;
+    $start = $column === 'uhid' ? 4 : 3;
     $row = mysqli_fetch_assoc(mysqli_query($con,
         "SELECT SUBSTR(MAX(`$column`),$start,12) AS seq FROM central_opd WHERE `$column` LIKE '%$dateKey%'"));
     return (isset($row['seq']) && trim((string) $row['seq']) !== '') ? (string) ($row['seq'] + 1) : $dateKey . '0001';
@@ -170,7 +170,7 @@ function reg_register_opd($con, array $in, $createdBy)
     $rxId = '';
     $rxKey = (string) env('RETAILXPRESS_API_KEY', '');
     if ($rxKey !== '') {
-        $rxId = reg_rx_find_or_create_customer($rxKey, $name, $mobile, reg_field($in, 'address'), strtoupper($gender), 'BMSH' . $uhid);
+        $rxId = reg_rx_find_or_create_customer($rxKey, $name, $mobile, reg_field($in, 'address'), strtoupper($gender), 'SGN' . $uhid);
     }
 
     $cols = ['uhid', 'opd_no', 'date', 'name', 'dob', 'age', 'gender', 'address', 'diagnosis', 'dept_id', 'sub_deptid',
@@ -183,7 +183,7 @@ function reg_register_opd($con, array $in, $createdBy)
     $id = 0;
     $vals = [];
     for ($attempt = 0; $attempt < 5; $attempt++) {
-        $vals = ['BMSH' . $uhid, 'OP' . $opd_no, $date, $name, $dob === '' ? null : $dob, reg_field($in, 'age'), $gender,
+        $vals = ['SGN' . $uhid, 'OP' . $opd_no, $date, $name, $dob === '' ? null : $dob, reg_field($in, 'age'), $gender,
             reg_field($in, 'address'), reg_field($in, 'diagnosis'), $deptId, reg_field($in, 'sub_department'),
             reg_field($in, 'religion'), reg_field($in, 'caste'), reg_field($in, 'parent_name'), reg_field($in, 'education'),
             reg_field($in, 'marital_status'), reg_field($in, 'occupation'), $economic, $bplNo,
@@ -214,7 +214,7 @@ function reg_register_opd($con, array $in, $createdBy)
 
     return reg_result(true, 201, 'OPD registration successful', [
         'id' => $id,
-        'uhid' => 'BMSH' . $uhid,
+        'uhid' => 'SGN' . $uhid,
         'opd_no' => 'OP' . $opd_no,
         'token' => $token,
         'date' => $date,

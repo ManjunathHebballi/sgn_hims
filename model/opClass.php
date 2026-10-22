@@ -248,7 +248,7 @@ class addOP
       }
     }
     if ($y != substr($uhid, 0, 8)) {
-      $data = "SELECT SUBSTR(MAX(uhid),5,12) as uhid FROM central_opd where uhid like '%$y%'";
+      $data = "SELECT SUBSTR(MAX(uhid),4,12) as uhid FROM central_opd where uhid like '%$y%'";
       $op_no = mysqli_fetch_assoc(mysqli_query($con, $data));
       if (isset($op_no['uhid'])) {
         $uhid = $op_no['uhid'] + 1;
@@ -312,7 +312,7 @@ class addOP
         "phone_number" => $phoneClean,
         "address" => (string)$this->address,
         "gender" => $gender,
-        "unique_code" => "BMSH" . $uhid
+        "unique_code" => "SGN" . $uhid
       );
 
       $customerUrl = 'https://api.retailxpress.ai/v1/external/customer';
@@ -354,7 +354,7 @@ class addOP
 
     while ($insertAttempts < $maxInsertRetries) {
       $sql = "INSERT INTO `central_opd`(`uhid`,`opd_no`,`date`, `name`, `dob`, `age`, `gender`, `address`, `diagnosis`, `dept_id`, `sub_deptid`, `religion`, `caste`, `parent_name`, `education`, `marital_status`, `occupation`, `economic_state`, `bpl_no`,`annual_income`,`category`,`mobile`,`doctor`,`created_by`,`pan`,`aadhar`,`policy`,`patient_type`,`created_at`,`token`,`city`,`mlc`,`rx_id`,`abha_number`,`abha_address`,`state`,`district`,`pincode`)
-        VALUES ('BMSH$uhid','OP$opd_no','$this->admdate','$this->fname',$dobSql,'$this->age','$this->sex','$this->address','$this->diagnosis','$this->department','$this->subdepartment','$this->religion','$this->caste','$this->pname','$this->edu','$this->marital','$this->occupation','$this->economic','$this->cardn','$this->annual','$this->category','$this->mobile','$this->doctor','$_SESSION[name]','$this->pan','$this->aadhar','$this->policy','$this->ptype',now(),'$token','$this->city','$this->mlc','$customerId','$abhaNumber','$abhaAddress','$stateVal','$districtVal','$pincodeVal')";
+        VALUES ('SGN$uhid','OP$opd_no','$this->admdate','$this->fname',$dobSql,'$this->age','$this->sex','$this->address','$this->diagnosis','$this->department','$this->subdepartment','$this->religion','$this->caste','$this->pname','$this->edu','$this->marital','$this->occupation','$this->economic','$this->cardn','$this->annual','$this->category','$this->mobile','$this->doctor','$_SESSION[name]','$this->pan','$this->aadhar','$this->policy','$this->ptype',now(),'$token','$this->city','$this->mlc','$customerId','$abhaNumber','$abhaAddress','$stateVal','$districtVal','$pincodeVal')";
 
       $res = mysqli_query($con, $sql);
       if ($res) {
@@ -913,7 +913,7 @@ LEFT JOIN billing b
     $sql = "DELETE from central_opd where id='$id'";
     $res = mysqli_query($con, $sql);
     $opd = substr($row['opd_no'], 2, 12) - 1;
-    $uhid = substr($row['uhid'], 4, 13) - 1;
+    $uhid = substr($row['uhid'], 3, 13) - 1;
     $query = "UPDATE data_table set table_id=$opd WHERE id=1";
     mysqli_query($con, $query);
     $query = "UPDATE data_table set table_id=$uhid WHERE id=4";

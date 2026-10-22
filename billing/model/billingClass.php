@@ -1289,7 +1289,7 @@ ORDER BY collected_by";
         }
         $y = date("Ymd", strtotime($date));
         if ($y != substr($opd_no, 0, 8)) {
-            $data = "SELECT SUBSTR(MAX(opd_no),3,12) as opd,SUBSTR(MAX(uhid),5,12) as uhid FROM central_opd where opd_no like '%$y%'";
+            $data = "SELECT SUBSTR(MAX(opd_no),3,12) as opd,SUBSTR(MAX(uhid),4,12) as uhid FROM central_opd where opd_no like '%$y%'";
             $op_no = mysqli_fetch_assoc(mysqli_query($con, $data));
             if (isset($op_no['opd'])) {
                 $opd_no = $op_no['opd'] + 1;
@@ -1298,7 +1298,7 @@ ORDER BY collected_by";
             }
         }
         if ($y != substr($uhid, 0, 8)) {
-            $data = "SELECT SUBSTR(MAX(uhid),5,12) as uhid FROM central_opd where opd_no like '%$y%'";
+            $data = "SELECT SUBSTR(MAX(uhid),4,12) as uhid FROM central_opd where opd_no like '%$y%'";
             $op_no = mysqli_fetch_assoc(mysqli_query($con, $data));
             if (isset($op_no['uhid'])) {
                 $uhid = $op_no['uhid'] + 1;
@@ -1356,7 +1356,7 @@ ORDER BY collected_by";
                 "phone_number" => $phoneClean,
                 "address" => (string)$this->address,
                 "gender" => $gender,
-                "unique_code" => "BMSH" . $uhid
+                "unique_code" => "SGN" . $uhid
             );
 
             $curl = curl_init();
@@ -1383,7 +1383,7 @@ ORDER BY collected_by";
 
 
         $sql = "INSERT INTO `central_opd`(`uhid`,`opd_no`,`date`, `name`, `age`, `gender`, `address`, `diagnosis`, `dept_id`,  `religion`,  `parent_name`,  `marital_status`,`mobile`,`doctor`,`created_by`,`pan`,`aadhar`,`policy`,`patient_type`,`city`,`mlc`,`rx_id`) 
-      VALUES ('BMSH$uhid','OP$opd_no','$this->admdate','$this->fname','$this->age','$gender','$this->address','$this->diagnosis','$this->department','$this->religion','$this->pname','$this->marital','$this->mobile','$this->doctor','$_SESSION[name]','$this->pan','$this->aadhar','$this->policy','$this->ptype','$this->city','$this->mlc','$customerId')";
+      VALUES ('SGN$uhid','OP$opd_no','$this->admdate','$this->fname','$this->age','$gender','$this->address','$this->diagnosis','$this->department','$this->religion','$this->pname','$this->marital','$this->mobile','$this->doctor','$_SESSION[name]','$this->pan','$this->aadhar','$this->policy','$this->ptype','$this->city','$this->mlc','$customerId')";
         //   echo $sql;exit;
         $res = mysqli_query($con, $sql);
 

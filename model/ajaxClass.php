@@ -550,7 +550,7 @@ $sql1->close();
             $search=mysqli_real_escape_string($con,$search);
             $patientKey = "CASE WHEN `uhid` IS NOT NULL AND `uhid` != '' THEN CONCAT('U-', `uhid`) WHEN `mobile` IS NOT NULL AND `mobile` != '' THEN CONCAT('M-', `mobile`) ELSE CONCAT('O-', `opd_no`) END";
 
-            if(preg_match('/^[0-9]+$/',$search) || stripos($search,'BMSH')===0)
+            if(preg_match('/^[0-9]+$/',$search) || stripos($search,'SGN')===0)
             {
                 $where="`opd_no` like '$search%' OR `uhid` like '$search%' OR `mobile` like '$search%'";
             }

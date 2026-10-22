@@ -60,7 +60,7 @@ function getBulkGeneratedOpdCounters($con, $date)
 
     if($y != substr((string)$uhid, 0, 8))
     {
-        $uhid_res = mysqli_query($con, "SELECT SUBSTR(MAX(uhid),5,12) as uhid FROM central_opd WHERE uhid LIKE 'BMSH$y%'");
+        $uhid_res = mysqli_query($con, "SELECT SUBSTR(MAX(uhid),4,12) as uhid FROM central_opd WHERE uhid LIKE 'SGN$y%'");
         $uhid_row = $uhid_res ? mysqli_fetch_assoc($uhid_res) : array();
         $uhid = !empty($uhid_row['uhid']) ? ((int)$uhid_row['uhid'] + 1) : (int)($y.'0001');
     }
@@ -250,7 +250,7 @@ if(isset($_REQUEST['submit']))
             continue;
         }
 
-        $uhid_value = 'BMSH'.$next_uhid;
+        $uhid_value = 'SGN'.$next_uhid;
         $opd_value = 'OP'.$next_opd_no;
         $name = escapeBulkValue($con, $row['name']);
         $age = escapeBulkValue($con, $row['age']);

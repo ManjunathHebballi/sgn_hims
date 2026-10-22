@@ -44,7 +44,7 @@ Each call creates a new record. Calling twice with the same data registers the p
 
 `POST /api/opd_registration.php`
 
-Creates a new OPD registration with a new UHID (`BMSH…`), OPD number (`OP…`) and the doctor's next token for that day.
+Creates a new OPD registration with a new UHID (`SGN…`), OPD number (`OP…`) and the doctor's next token for that day.
 
 | Field | Required | Notes |
 |-------|----------|-------|
@@ -93,7 +93,7 @@ curl -X POST http://<server>/sgn_jalna_hospital/api/opd_registration.php \
   "message": "OPD registration successful",
   "data": {
     "id": 10452,
-    "uhid": "BMSH202610090012",
+    "uhid": "SGN202610090012",
     "opd_no": "OP202610090031",
     "token": 7,
     "date": "2026-10-09",
@@ -161,7 +161,7 @@ curl -X POST http://<server>/sgn_jalna_hospital/api/ipd_registration.php \
     "id": 3120,
     "ipd_no": "IP20261009004",
     "opd_no": "OP202610090031",
-    "uhid": "BMSH202610090012",
+    "uhid": "SGN202610090012",
     "name": "RAVI KUMAR",
     "admission_date": "2026-10-09 11:20:00",
     "ward": "Male",
