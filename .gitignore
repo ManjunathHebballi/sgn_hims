@@ -145,3 +145,7 @@ secrets.json
 test_data/
 development_notes.txt
 TODO.txt
+
+# Docker runtime data and DB seed dumps (contain patient data)
+docker-data/
+db/

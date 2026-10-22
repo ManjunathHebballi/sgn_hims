@@ -1,10 +1,14 @@
+# Fixed project name so this stack never merges with another hospital's
+# stack on the same server, whatever folder it is cloned into.
+name: sgn_hospital
+
 services:
   # PHP Apache Application
   web:
     build: .
     container_name: sgn_hospital_web
     ports:
-      - "1111:1111"
+      - "${WEB_PORT:-3111}:1111"
     volumes:
       - ./:/var/www/html:rw
       - ./docker-data/sessions:/var/www/sessions:rw
@@ -22,26 +26,27 @@ services:
     image: mysql:8.0
     container_name: sgn_hospital_db
     ports:
-      - "1112:3306"
+      # Host access only (backups, SSH tunnel); not exposed to the internet.
+      - "127.0.0.1:${DB_HOST_PORT:-3112}:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: toor
-      MYSQL_DATABASE: sgn_hospital
-      MYSQL_USER: sgn_user
-      MYSQL_PASSWORD: TXDy4iKYMtBTer2j
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
       TZ: Asia/Kolkata
     volumes:
       # Persistent database storage on physical machine
       - ./docker-data/mysql:/var/lib/mysql
-      # Initial database schema (if exists)
+      # Initial database dump(s), imported only on first start (empty data dir)
       - ./db:/docker-entrypoint-initdb.d
     networks:
       - hospital_network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptoor"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 30
     command: --default-authentication-plugin=mysql_native_password --sql-mode="no_engine_substitution"
 
   # phpMyAdmin for database management (optional)
@@ -49,7 +54,7 @@ services:
     image: phpmyadmin/phpmyadmin
     container_name: sgn_hospital_phpmyadmin
     ports:
-      - "1113:80"
+      - "${PMA_PORT:-3113}:80"
     environment:
       PMA_HOST: db
       PMA_PORT: 3306
@@ -63,7 +68,3 @@ services:
 networks:
   hospital_network:
     driver: bridge
-
-volumes:
-  mysql_data:
-    driver: local
