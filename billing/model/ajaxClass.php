@@ -406,7 +406,7 @@ $con->close();
         //   else{
               $admin="department=$id";
         //   }
-           $sql="SELECT * FROM bed WHERE department='$id' and ward='$ward' and status='active'";
+           $sql="SELECT * FROM bed WHERE (department='$id' or department=0) and ward='$ward' and status='active'";
         //   echo $sql;
           $res=mysqli_query($con,$sql);
           return $res;

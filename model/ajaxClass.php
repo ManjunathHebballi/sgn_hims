@@ -452,7 +452,7 @@ $sql1->close();
            }
            else
            {
-               $wd=" department='$id' and ward='$ward' and ";
+               $wd=" (department='$id' or department=0) and ward='$ward' and ";
            }
            $sql="SELECT * FROM bed WHERE $wd status='active'";
         //   echo $sql;

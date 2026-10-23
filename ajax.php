@@ -410,7 +410,7 @@ if($_REQUEST['page']=='ward')
      echo "<option value=''>Select Ward</option>";
      while($row=mysqli_fetch_assoc($data))
     { ?>
-        <option value="<?= $row['ward']?>"><?= $row['ward']?></option>
+        <option value="<?= $row['ward']?>" <?php if($row['ward']=='General Ward') echo 'selected';?>><?= $row['ward']?></option>
     <?php }
 }
 if($_REQUEST['page']=='deleteOT')

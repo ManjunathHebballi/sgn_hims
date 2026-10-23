@@ -243,7 +243,7 @@ $newIP = new addIP;
                     <?php $ward=$newIP->selectWard(); 
                     while ($res=mysqli_fetch_assoc($ward))
                     {?>
-                    <option value="<?= $res['ward']?>"><?= $res['ward']?></option>
+                    <option value="<?= $res['ward']?>" <?php if($res['ward']=='General Ward') echo 'selected';?>><?= $res['ward']?></option>
                     <?php } ?>
 
                  
@@ -591,6 +591,8 @@ function getdoctor(val)
         success: function(s){
             // alert(s);
            $('#ward').html(s);
+           // General Ward comes back pre-selected; load its beds straight away
+           if ($('#ward').val()) getBed($('#ward').val());
         }
          });
     }
