@@ -63,7 +63,7 @@ class userlogin {
             exit;
         }
 
-        $con = mysqli_connect($this->dbHost, $this->dbUser, $this->dbPass,$this->dbName  ) ;
+        $con = mysqli_connect($this->dbHost, $this->dbUser, $this->dbPass, $this->dbName, (int)$this->dbport) ;
 
 
 
@@ -79,7 +79,7 @@ class userlogin {
         
 
 
-        $con = mysqli_connect($this->dbHost, $this->dbUser, $this->dbPass,$this->dbName) ;
+        $con = mysqli_connect($this->dbHost, $this->dbUser, $this->dbPass, $this->dbName, (int)$this->dbport) ;
 
 
 
@@ -107,7 +107,7 @@ class userlogin {
         mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
         
         try {
-            $con = mysqli_connect($this->dbHost, $this->dbUser, $this->dbPass, $this->dbName);
+            $con = mysqli_connect($this->dbHost, $this->dbUser, $this->dbPass, $this->dbName, (int)$this->dbport);
             if (!$con) {
                 error_log("MySQL Connection failed: " . mysqli_connect_error());
                 die("Failed to Login: Database connection error. Host: {$this->dbHost}, User: {$this->dbUser}, DB: {$this->dbName}");

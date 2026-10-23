@@ -66,7 +66,7 @@ class userlogin {
         echo "<script>window.location='../index.php'</script>";
         }
 
-        $con = mysqli_connect($this->dbHost, $this->dbUser, $this->dbPass,$this->dbName) ;
+        $con = mysqli_connect($this->dbHost, $this->dbUser, $this->dbPass, $this->dbName, (int)$this->dbport) ;
 
 
 
@@ -90,7 +90,7 @@ class userlogin {
         // Connect to database
 
         // Select database
-        $con=mysqli_connect($this->dbHost, $this->dbUser, $this->dbPass,$this->dbName);
+        $con=mysqli_connect($this->dbHost, $this->dbUser, $this->dbPass, $this->dbName, (int)$this->dbport);
          
         $query = "SELECT  u.`name`, u.`last_name`, u.`designation`, u.`mobile`, d.`dept_name`, u.`role`,u.`id` FROM `user` u LEFT JOIN `department` d on u.`department`=d.`id`
                    WHERE u.`email` = $username AND u.`password` = md5($userpwd) AND u.`status` = 'active'";
