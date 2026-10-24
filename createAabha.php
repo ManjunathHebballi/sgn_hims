@@ -1580,6 +1580,37 @@ date_default_timezone_set(env('TZ', 'Asia/Kolkata'));
       border: 1px solid #d9dee6;
     }
 
+    /* Aadhaar face authentication: QR scanned with the patient's ABHA app.
+       Sits above #enterotp when it opens from the Create flow. */
+    #faceQrModal {
+      z-index: 1065;
+    }
+
+    .face-qr-box {
+      width: max-content;
+      margin: 0 auto;
+      padding: 12px;
+      background: #fff;
+      border: 1px solid #d9dee6;
+      border-radius: 10px;
+    }
+
+    .face-qr-box img,
+    .face-qr-box canvas {
+      display: block;
+    }
+
+    .face-qr-steps {
+      margin: 14px 0 0;
+      padding-left: 18px;
+      font-size: 13px;
+      color: #33475b;
+    }
+
+    .face-qr-steps li {
+      margin-bottom: 4px;
+    }
+
     /* Toast notifications (replace blocking alerts) */
     #toastContainer {
       position: fixed;
@@ -1700,6 +1731,44 @@ date_default_timezone_set(env('TZ', 'Asia/Kolkata'));
                     <button class="btn-modal-primary" id="confirmAbhaSelection" style="width:auto;padding:11px 24px;">
                       <i class="ri-check-line"></i> Continue with Selected
                     </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Aadhaar face authentication: the patient scans this QR with their phone,
+                 the ABHA app runs the face capture, and the page polls until done. -->
+            <div class="modal fade" id="faceQrModal" tabindex="-1" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+              <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+                <div class="modal-content">
+                  <div class="abha-modal-header">
+                    <div class="abha-modal-icon">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+                        <circle cx="12" cy="11" r="3" />
+                        <path d="M8 17c1-1.5 2.4-2.2 4-2.2s3 .7 4 2.2" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p class="abha-modal-title">Face Authentication</p>
+                      <p class="abha-modal-subtitle" id="faceQrSubtitle">Ask the patient to scan this QR with their phone</p>
+                    </div>
+                    <button type="button" class="abha-modal-close" id="faceQrClose">&times;</button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="face-qr-box">
+                      <div id="faceQrCode"></div>
+                    </div>
+                    <ol class="face-qr-steps">
+                      <li>Scan the QR with the phone camera. It opens the <b>ABHA</b> app.</li>
+                      <li>Follow the app to complete the face scan (it may ask to install Aadhaar FaceRD).</li>
+                      <li>Keep this window open. It continues on its own once the scan is done.</li>
+                    </ol>
+                    <div class="bio-status checking" id="faceQrStatus">
+                      <span id="faceQrStatusText">Waiting for the patient to scan the QR…</span>
+                    </div>
+                  </div>
+                  <div class="abha-modal-footer">
+                    <button type="button" class="btn-modal-outline" id="faceQrCancel">Cancel</button>
                   </div>
                 </div>
               </div>
@@ -1907,6 +1976,10 @@ date_default_timezone_set(env('TZ', 'Asia/Kolkata'));
                         <div class="mode-opt">
                           <input type="radio" name="abha_auth_mode" id="auth_mode_iris" value="iris">
                           <label for="auth_mode_iris">Iris</label>
+                        </div>
+                        <div class="mode-opt">
+                          <input type="radio" name="abha_auth_mode" id="auth_mode_face" value="face">
+                          <label for="auth_mode_face">Face (QR)</label>
                         </div>
                       </div>
                       <div id="bioDeviceStatus" class="bio-status" style="display:none;">
@@ -3255,6 +3328,11 @@ date_default_timezone_set(env('TZ', 'Asia/Kolkata'));
       return mode === 'iris' ? 'Iris' : 'Fingerprint';
     }
 
+    // Methods that use an RD-service scanner on this PC (face uses the patient's phone).
+    function isRdMode(mode) {
+      return mode === 'finger' || mode === 'iris';
+    }
+
     // RD services answer custom HTTP verbs (RDSERVICE / DEVICEINFO / CAPTURE).
     function rdCall(method, url, body, timeout) {
       return $.ajax({
@@ -3351,6 +3429,12 @@ date_default_timezone_set(env('TZ', 'Asia/Kolkata'));
         return;
       }
       $s.removeClass('ready missing checking').show();
+      $('#bioDeviceRecheck').toggle(isRdMode(mode));
+      if (mode === 'face') {
+        $s.addClass('checking');
+        $('#bioDeviceStatusText').text('No scanner needed: the patient scans a QR with the ABHA app on their phone.');
+        return;
+      }
       if (window.RD_DEVICES === null) {
         $s.addClass('checking');
         $('#bioDeviceStatusText').text('Looking for ' + rdModeLabel(mode).toLowerCase() + ' scanner…');
@@ -3384,9 +3468,9 @@ date_default_timezone_set(env('TZ', 'Asia/Kolkata'));
     // first time a biometric method is picked (and on "Re-check").
     function abhaApplyAuthMode() {
       var mode = abhaAuthMode();
-      var label = mode === 'otp' ? 'Send Aadhaar OTP' : 'Capture ' + rdModeLabel(mode);
-      $('#create_abha').html('<i class="ri-' + (mode === 'otp' ? 'send-plane' : 'fingerprint') + '-line"></i> ' + label);
-      if (mode !== 'otp' && window.RD_DEVICES === null && !window.__rdDiscovering) {
+      var label = mode === 'otp' ? 'Send Aadhaar OTP' : mode === 'face' ? 'Show Face QR' : 'Capture ' + rdModeLabel(mode);
+      $('#create_abha').html('<i class="ri-' + (mode === 'otp' ? 'send-plane' : mode === 'face' ? 'qr-code' : 'fingerprint') + '-line"></i> ' + label);
+      if (isRdMode(mode) && window.RD_DEVICES === null && !window.__rdDiscovering) {
         window.__rdDiscovering = true;
         abhaRefreshDevices().always(function() {
           window.__rdDiscovering = false;
@@ -3544,6 +3628,211 @@ date_default_timezone_set(env('TZ', 'Asia/Kolkata'));
       });
     }
 
+    // ── Aadhaar face authentication by QR ─────────────────────────────────────
+    // ABDM opens a face-auth transaction (txnId) and the gateway returns its deep
+    // link (qrUrl). The patient scans the QR with their phone, the ABHA app runs
+    // the face capture, and this page polls capturePID until COMPLETE or FAILED;
+    // the caller then finishes the journey (ABHA creation).
+    // The status values come from the PSMRI FLW app, not the ABDM portal, so any
+    // other value is treated as still pending and logged once.
+    var FACE_POLL_MS = 5000;
+    var FACE_TIMEOUT_MS = 10 * 60 * 1000;
+    var faceSession = null;
+
+    // POST a face page to abha_integration.php. Always resolves (never rejects)
+    // with the parsed body, so callers branch on `success` alone.
+    function faceCall(page, data) {
+      var d = $.Deferred();
+      withAbdmToken(function(accessToken) {
+        $.ajax({
+          url: 'abha_integration.php',
+          method: 'POST',
+          contentType: 'application/json',
+          dataType: 'json',
+          data: JSON.stringify($.extend({
+            page: page,
+            accessToken: accessToken
+          }, data || {}))
+        }).done(function(res) {
+          d.resolve(res || {});
+        }).fail(function(xhr) {
+          var parsed = {};
+          try {
+            parsed = JSON.parse(xhr.responseText || '{}');
+          } catch (e) {}
+          d.resolve($.extend({
+            success: false,
+            message: abdmErrMsg(xhr, '')
+          }, parsed));
+        });
+      }, function(msg) {
+        d.resolve({
+          success: false,
+          message: msg
+        });
+      });
+      return d.promise();
+    }
+
+    function faceErrText(res, fallback) {
+      var info = abdmErrorText(res || {});
+      return info.message ? info.message + (info.code ? ' (' + info.code + ')' : '') : fallback;
+    }
+
+    function faceSetStatus(kind, text) {
+      $('#faceQrStatus').removeClass('ready missing checking').addClass(kind);
+      $('#faceQrStatusText').text(text);
+    }
+
+    function faceStop() {
+      if (faceSession && faceSession.timer) clearTimeout(faceSession.timer);
+      faceSession = null;
+    }
+
+    // Show the QR for this transaction and poll it. Resolves with the txnId on
+    // COMPLETE; rejects with a message on FAILED or timeout, and with '' when the
+    // operator cancels.
+    function faceShowQrAndWait(txnId, qrUrl, subtitle) {
+      faceStop();
+      var d = $.Deferred();
+      var session = {
+        txnId: txnId,
+        started: Date.now(),
+        seen: {}
+      };
+      faceSession = session;
+
+      function finish(ok, msg) {
+        if (faceSession !== session) return;
+        faceStop();
+        $('#faceQrModal').modal('hide');
+        if (ok) {
+          d.resolve(txnId);
+        } else {
+          d.reject(msg || '');
+        }
+      }
+
+      function poll() {
+        if (faceSession !== session) return;
+        if (Date.now() - session.started > FACE_TIMEOUT_MS) {
+          finish(false, 'The QR expired before the face scan was finished. Please start again.');
+          return;
+        }
+        faceCall('face_status', {
+          txnId: txnId
+        }).done(function(res) {
+          if (faceSession !== session) return;
+          if (!res.success) {
+            finish(false, 'Could not read the face authentication status: ' + faceErrText(res, 'please try again.'));
+            return;
+          }
+          var data = res.data || {};
+          var status = String(data.status || '').toUpperCase();
+          if (!session.seen[status]) {
+            session.seen[status] = true;
+            console.info('Face auth status:', status || '(none)', data.message || '');
+          }
+          if (status === 'COMPLETE') {
+            finish(true);
+            return;
+          }
+          if (status === 'FAILED') {
+            finish(false, data.message || 'Face authentication failed on the phone.');
+            return;
+          }
+          if (status === 'VERIFIED') {
+            faceSetStatus('ready', 'Face verified on the phone. Finishing…');
+          } else {
+            faceSetStatus('checking', 'Waiting for the patient to complete the face scan on their phone…');
+          }
+          session.timer = setTimeout(poll, FACE_POLL_MS);
+        });
+      }
+
+      session.cancel = function() {
+        finish(false, '');
+      };
+
+      $('#faceQrSubtitle').text(subtitle || 'Ask the patient to scan this QR with their phone');
+      $('#faceQrCode').empty();
+      if (typeof QRCode === 'function') {
+        new QRCode(document.getElementById('faceQrCode'), {
+          text: qrUrl,
+          width: 220,
+          height: 220,
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } else {
+        $('#faceQrCode').text('QR library did not load. Reload the page and try again.');
+      }
+      faceSetStatus('checking', 'Waiting for the patient to scan the QR…');
+      hideLoader();
+      $('#faceQrModal').modal('show');
+      session.timer = setTimeout(poll, FACE_POLL_MS);
+      return d.promise();
+    }
+
+    $('#faceQrCancel, #faceQrClose').on('click', function() {
+      if (faceSession && faceSession.cancel) {
+        faceSession.cancel();
+      } else {
+        $('#faceQrModal').modal('hide');
+      }
+    });
+    // Opened over #enterotp (Create): lift its backdrop too, and keep the page
+    // scroll-locked for the modal still open underneath when it closes.
+    $('#faceQrModal').on('shown.bs.modal', function() {
+      $('.modal-backdrop').last().css('z-index', 1060);
+    }).on('hidden.bs.modal', function() {
+      if ($('.modal.show').length) $('body').addClass('modal-open');
+    });
+
+    // Open a face transaction with `startPage`, show its QR, and on COMPLETE run
+    // `onComplete(txnId)`. `fallback` names the other method in failure toasts.
+    function faceStart(startPage, startData, subtitle, fallback, onComplete) {
+      showLoader();
+      faceCall(startPage, startData).done(function(res) {
+        var data = res.data || {};
+        if (!res.success || !data.txnId || !data.qrUrl) {
+          hideLoader();
+          toast('Could not start face authentication: ' + faceErrText(res, 'please try again') + '. You can also use ' + fallback + '.');
+          return;
+        }
+        faceShowQrAndWait(data.txnId, data.qrUrl, subtitle)
+          .done(function(txnId) {
+            showLoader();
+            onComplete(txnId);
+          })
+          .fail(function(msg) {
+            if (msg) toast(msg + ' You can try again or use ' + fallback + '.');
+          });
+      });
+    }
+
+    // Create ABHA by Aadhaar face authentication. On success the flow continues
+    // exactly as after a verified Aadhaar OTP (card, mobile check, ABHA address).
+    function abhaFaceEnroll(aadhaar, mobile) {
+      faceStart('face_init', {}, 'Creating ABHA: ask the patient to scan this QR with their phone', 'Aadhaar OTP', function(txnId) {
+        faceCall('enroll_face', {
+          txnId: txnId,
+          aadhaar: aadhaar,
+          mobile: mobile
+        }).done(function(res) {
+          if (res.success && res.data && res.data.ABHAProfile) {
+            // Enrolment txnId drives the mobile-verify + ABHA-address steps.
+            $('#txnId').val(res.data.txnId || '');
+            $('#mobileTxnId').val('');
+            window.MOBILE_OTP_VERIFIED = false;
+            handleAbhaCreated(res.data);
+          } else {
+            hideLoader();
+            toast('Face authentication failed: ' + faceErrText(res, 'the ABHA could not be created.') + ' Please try again or use Aadhaar OTP.');
+          }
+        });
+      });
+    }
+
     $('#create_abha').on('click', function(e) {
       e.preventDefault();
 
@@ -3585,8 +3874,13 @@ date_default_timezone_set(env('TZ', 'Asia/Kolkata'));
         storeConsent('create');
       }
 
-      // Biometric method: capture from the RD-service scanner instead of sending an OTP.
+      // Face method: QR for the patient's phone instead of sending an OTP.
       // (Resend OTP re-triggers this button and must always stay on the OTP path.)
+      if (abhaAuthMode() === 'face' && !window.__aadhaarResend) {
+        abhaFaceEnroll(aadhaar, regMobile);
+        return;
+      }
+      // Biometric method: capture from the RD-service scanner instead of sending an OTP.
       if (abhaAuthMode() !== 'otp' && !window.__aadhaarResend) {
         abhaBiometricCapture(abhaAuthMode(), aadhaar, regMobile);
         return;
@@ -3750,7 +4044,7 @@ date_default_timezone_set(env('TZ', 'Asia/Kolkata'));
       var consentOk = reqTotal > 0 && reqDone === reqTotal;
       var nameOk = ($('#consent_beneficiary_name').val() || '').trim().length > 0;
       // Biometric methods also need their scanner detected and READY.
-      var deviceOk = abhaAuthMode() === 'otp' || !!bioDeviceFor(abhaAuthMode());
+      var deviceOk = !isRdMode(abhaAuthMode()) || !!bioDeviceFor(abhaAuthMode());
       $('#create_abha').prop('disabled', !(aadhaarOk && mobileOk && consentOk && nameOk && deviceOk));
     }
     window.refreshCreateAbhaBtn = refreshCreateAbhaBtn;

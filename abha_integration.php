@@ -607,6 +607,65 @@ if ($page === 'get_token') {
     echo $response;
     exit;
 
+// ── Aadhaar face authentication (QR) ──────────────────────────────────────────
+// The desk shows a QR (the face-auth deep link); the patient's phone does the
+// face capture in the ABHA app while the page polls face_status. One transaction
+// serves create (enroll_face) and the Aadhaar face login (face_login); the
+// mobile-search flow starts its own with face_find_request.
+} elseif (in_array($page, ['face_init', 'face_status', 'enroll_face', 'face_login', 'face_find_request', 'face_find_verify'], true)) {
+    $accessToken = $input['accessToken'] ?? '';
+    $txnId       = isset($input['txnId']) ? preg_replace('/[^a-zA-Z0-9\-]/', '', (string) $input['txnId']) : '';
+    $aadhaar     = isset($input['aadhaar']) ? preg_replace('/[^0-9]/', '', (string) $input['aadhaar']) : '';
+    $mobile      = isset($input['mobile']) ? preg_replace('/[^0-9]/', '', (string) $input['mobile']) : '';
+    $index       = isset($input['index']) ? preg_replace('/[^0-9]/', '', (string) $input['index']) : '';
+
+    $faceRoutes = [
+        'face_init'         => 'enrollment/face/init',
+        'face_status'       => 'enrollment/face/status',
+        'enroll_face'       => 'enrollment/create-by-face',
+        'face_login'        => 'verification/face/login',
+        'face_find_request' => 'verification/face/find/request',
+        'face_find_verify'  => 'verification/face/find/verify',
+    ];
+    $body = [];
+    if ($page !== 'face_init') {
+        if ($txnId === '') {
+            exit(json_encode(["success" => false, "message" => "Missing txnId"]));
+        }
+        $body["txnId"] = $txnId;
+    }
+    if ($page === 'enroll_face' || $page === 'face_login') {
+        if (strlen($aadhaar) !== 12) {
+            exit(json_encode(["success" => false, "message" => "Invalid Aadhaar number"]));
+        }
+        $body["aadhaar"] = $aadhaar;
+    }
+    if ($page === 'enroll_face' && preg_match('/^[6-9][0-9]{9}$/', $mobile)) {
+        $body["mobile"] = $mobile;
+    }
+    if ($page === 'face_find_request') {
+        if ($index === '') {
+            exit(json_encode(["success" => false, "message" => "Missing index"]));
+        }
+        $body["index"] = $index;
+    }
+
+    $ch = curl_init("$baseurl/api/milestone1/abha/" . $faceRoutes[$page]);
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER     => [
+            "Content-Type: application/json",
+            "X-API-Key: $apiKey",
+            "Authorization: Bearer $accessToken",
+        ],
+        CURLOPT_POSTFIELDS     => json_encode((object) $body),
+    ]);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    echo $response;
+    exit;
+
 // ── abha_suggestion (TC-008: fetch suggested ABHA addresses) ───────────────────
 } elseif ($page === 'abha_suggestion') {
     $txnId       = isset($input['txnId']) ? preg_replace('/[^a-zA-Z0-9\-]/', '', $input['txnId']) : '';
