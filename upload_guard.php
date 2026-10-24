@@ -110,30 +110,54 @@ function uploadGuardMagicOk($path, $mime)
  * image to a parser but a web shell to an interpreter, so the bytes are checked
  * regardless of how well-formed the file is.
  */
-function uploadGuardHasScriptSignature($path)
+function uploadGuardHasScriptSignature($path, $mime = '')
 {
-    $fh = @fopen($path, 'rb');
-    if (!$fh) {
+    $data = @file_get_contents($path);
+    if ($data === false) {
         return true;   // unreadable — refuse rather than guess
     }
-    $needles = ['<?php', '<?=', '<script', '<%', '#!/'];
-    $carry   = '';
-    while (!feof($fh)) {
-        $chunk = fread($fh, 65536);
-        if ($chunk === false) {
-            break;
-        }
-        $hay = strtolower($carry . $chunk);
-        foreach ($needles as $n) {
-            if (strpos($hay, $n) !== false) {
-                fclose($fh);
-                return true;
-            }
-        }
-        // Keep a short tail so a needle split across chunks is still found.
-        $carry = substr($chunk, -8);
+
+    // A shebang only means anything as the first bytes of the file.
+    if (strncmp($data, '#!/', 3) === 0) {
+        return true;
     }
-    fclose($fh);
+
+    // Long markers are checked across every byte: they are too long to turn up
+    // by chance in compressed data.
+    $hay = strtolower($data);
+    foreach (['<?php', '<script'] as $n) {
+        if (strpos($hay, $n) !== false) {
+            return true;
+        }
+    }
+
+    // Two- and three-byte markers DO turn up by chance inside compressed image
+    // data and PDF streams (a scanned 560 KB discharge card held "<%" 13 times),
+    // which rejected genuine documents. Images are rebuilt from their pixels
+    // after the move, which discards anything hidden in them, so skip those.
+    // For a PDF, check only the text outside stream bodies; the stream contents
+    // are inflated and scanned by uploadGuardPdfHasActiveContent().
+    if (strpos($mime, 'image/') === 0) {
+        return false;
+    }
+    if ($mime === 'application/pdf') {
+        $outside = '';
+        $offset  = 0;
+        while (($s = strpos($hay, 'stream', $offset)) !== false) {
+            $end = strpos($hay, 'endstream', $s + 6);
+            if ($end === false) {
+                break;
+            }
+            $outside .= substr($hay, $offset, $s - $offset) . ' ';
+            $offset = $end + 9;
+        }
+        $hay = $outside . substr($hay, $offset);
+    }
+    foreach (['<?=', '<%'] as $n) {
+        if (strpos($hay, $n) !== false) {
+            return true;
+        }
+    }
     return false;
 }
 
@@ -395,7 +419,7 @@ function uploadGuardStore(array $file, $kind, $destDir, &$error = null)
     }
 
     // 7. No embedded script (polyglot files).
-    if (uploadGuardHasScriptSignature($file['tmp_name'])) {
+    if (uploadGuardHasScriptSignature($file['tmp_name'], $mime)) {
         $error = 'The file contains embedded script content and was rejected.';
         return null;
     }
