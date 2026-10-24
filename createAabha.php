@@ -1549,6 +1549,37 @@ date_default_timezone_set(env('TZ', 'Asia/Kolkata'));
       font-weight: 600;
     }
 
+    /* Biometric (RD service) device status under "Authenticate With" */
+    .bio-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 8px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .bio-status.ready {
+      background: #e7f6ee;
+      color: #0a7a4d;
+      border: 1px solid #b7e4c7;
+    }
+
+    .bio-status.missing {
+      background: #fff6e6;
+      color: #9a6b00;
+      border: 1px solid #ffe0a3;
+    }
+
+    .bio-status.checking {
+      background: #eef2f7;
+      color: #33475b;
+      border: 1px solid #d9dee6;
+    }
+
     /* Toast notifications (replace blocking alerts) */
     #toastContainer {
       position: fixed;
@@ -1859,6 +1890,29 @@ date_default_timezone_set(env('TZ', 'Asia/Kolkata'));
                       <!-- Hidden: older code paths reference #abha_consent for the
                          "consent accepted" state; kept in sync from the checkboxes. -->
                       <input type="checkbox" id="abha_consent" style="display:none;">
+
+                      <!-- Authentication method: Aadhaar OTP, or biometric through a UIDAI
+                           RD-service device (Mantra MFS100 fingerprint / MIS100V2 iris)
+                           connected to this PC. -->
+                      <label class="modal-field-label" style="margin-top:14px;">Authenticate With</label>
+                      <div class="mode-opts">
+                        <div class="mode-opt">
+                          <input type="radio" name="abha_auth_mode" id="auth_mode_otp" value="otp" checked>
+                          <label for="auth_mode_otp">Aadhaar OTP</label>
+                        </div>
+                        <div class="mode-opt">
+                          <input type="radio" name="abha_auth_mode" id="auth_mode_finger" value="finger">
+                          <label for="auth_mode_finger">Fingerprint</label>
+                        </div>
+                        <div class="mode-opt">
+                          <input type="radio" name="abha_auth_mode" id="auth_mode_iris" value="iris">
+                          <label for="auth_mode_iris">Iris</label>
+                        </div>
+                      </div>
+                      <div id="bioDeviceStatus" class="bio-status" style="display:none;">
+                        <span id="bioDeviceStatusText"></span>
+                        <a id="bioDeviceRecheck" class="resend-link">Re-check</a>
+                      </div>
 
                       <button class="btn-modal-primary" id="create_abha" style="margin-top:14px;" disabled>
                         <i class="ri-send-plane-line"></i> Send Aadhaar OTP
@@ -3161,8 +3215,334 @@ date_default_timezone_set(env('TZ', 'Asia/Kolkata'));
     $('#enterotp').on('show.bs.modal', function() {
       window.__abhaMaxStep = 1;
       abhaRenderStep(1);
+      abhaApplyAuthMode();
       if (window.refreshCreateAbhaBtn) refreshCreateAbhaBtn();
     });
+
+    // ── Biometric Aadhaar authentication (UIDAI RD service) ──────────────────
+    // Fingerprint (Mantra MFS100) and iris (Mantra MIS100V2) scanners are reached
+    // through the vendor RD Service running on this PC at 127.0.0.1:11100-11120.
+    // The RD service returns a PID block already encrypted for UIDAI — the page
+    // only forwards it and never sees raw biometrics. Do not log the PID XML.
+    const RD_HOST = 'http://127.0.0.1';
+    const RD_PORT_FROM = 11100;
+    const RD_PORT_TO = 11120;
+    // UIDAI environment the PID is generated for: PP (pre-production) for the ABDM
+    // sandbox, P for production. The RD service itself must be configured for the
+    // same environment (ask the device vendor to switch it), else UIDAI rejects it.
+    const RD_ENV = <?php echo json_encode(getenv('RD_ENV') ?: (ABDM_CM_ID === 'sbx' ? 'PP' : 'P')); ?>;
+    // ABHA enrolment by biometric is an Aadhaar eKYC, and UIDAI only accepts the PID
+    // when its wadh matches the eKYC parameters ABDM sends; otherwise it answers
+    // K-547 "Invalid value for wadh". wadh = base64(sha256(ver+ra+rc+lr+de+pfr)).
+    // Verified on production 2026-10-24: ABDM's eKYC needs the wadh for "2.5FYYNN"
+    // (ver 2.5, ra=F, rc=Y, lr=Y, de=N, pfr=N) = RZ+k4w9y…. Refused: "2.5FYNNN" and
+    // "2.1FYNNN" (K-547), wadh="" and no wadh (552). RD_WADH in .env overrides it.
+    const RD_WADH = <?php echo json_encode((string) (getenv('RD_WADH') ?: 'RZ+k4w9ySTzOibQdDHPzCFqrKScZ74b3EibKYy1WyGw=')); ?>;
+    const RD_CAPTURE_TIMEOUT_MS = 15000;
+    const RD_MIN_QSCORE = 40; // below this, offer a re-scan before using the capture
+    // Set ABHA_BIO_ENROLL=true in .env once ABDM enables biometric enrolment for
+    // this client ID; until then a capture only verifies the scanner works.
+    const BIO_ENROLL_ENABLED = <?php echo json_encode(strtolower((string) getenv('ABHA_BIO_ENROLL')) === 'true'); ?>;
+
+    window.RD_DEVICES = null; // {finger: {...}, iris: {...}} once discovered
+    window.ABHA_BIO = null; // last successful capture {mode, pid, qScore, device}
+
+    function abhaAuthMode() {
+      return $('input[name="abha_auth_mode"]:checked').val() || 'otp';
+    }
+
+    function rdModeLabel(mode) {
+      return mode === 'iris' ? 'Iris' : 'Fingerprint';
+    }
+
+    // RD services answer custom HTTP verbs (RDSERVICE / DEVICEINFO / CAPTURE).
+    function rdCall(method, url, body, timeout) {
+      return $.ajax({
+        type: method,
+        url: url,
+        data: body || null,
+        contentType: 'text/xml; charset=utf-8',
+        processData: false,
+        dataType: 'text',
+        crossDomain: true,
+        timeout: timeout
+      });
+    }
+
+    function rdParseXml(text) {
+      try {
+        var doc = new DOMParser().parseFromString(text || '', 'text/xml');
+        return doc.getElementsByTagName('parsererror').length ? null : doc;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Probe one port: RDSERVICE tells us status + interface paths, DEVICEINFO the
+    // model (mi) which decides fingerprint vs iris. Resolves null when nothing
+    // usable is listening there.
+    function rdProbePort(port) {
+      var base = RD_HOST + ':' + port;
+      var d = $.Deferred();
+      rdCall('RDSERVICE', base + '/', null, 2000).done(function(text) {
+        var doc = rdParseXml(text);
+        var svc = doc && doc.getElementsByTagName('RDService')[0];
+        if (!svc) return d.resolve(null);
+        var paths = {};
+        $(doc).find('Interface').each(function() {
+          paths[(this.getAttribute('id') || '').toUpperCase()] = this.getAttribute('path') || '';
+        });
+        var dev = {
+          port: port,
+          base: base,
+          status: (svc.getAttribute('status') || '').toUpperCase(),
+          info: svc.getAttribute('info') || '',
+          capturePath: paths.CAPTURE || '/rd/capture',
+          infoPath: paths.DEVICEINFO || '/rd/info',
+          model: ''
+        };
+        rdCall('DEVICEINFO', base + dev.infoPath, null, 3000).done(function(t) {
+          var di = rdParseXml(t);
+          var node = di && di.getElementsByTagName('DeviceInfo')[0];
+          if (node) dev.model = node.getAttribute('mi') || '';
+          // L1 RD services state their modality outright (e.g. "Finger" / "Iris").
+          $(di).find('Param[name="modality_type"]').each(function() {
+            dev.modality = this.getAttribute('value') || '';
+          });
+        }).always(function() {
+          dev.mode = /IRIS/i.test(dev.modality || '') ? 'iris' :
+            dev.modality ? 'finger' :
+            (/MIS|IRIS/i.test(dev.model + ' ' + dev.info) ? 'iris' : 'finger');
+          d.resolve(dev);
+        });
+      }).fail(function() {
+        d.resolve(null);
+      });
+      return d.promise();
+    }
+
+    // Scan the RD port range in parallel; keep the first device found per mode,
+    // preferring one whose status is READY.
+    function rdDiscover() {
+      var probes = [];
+      for (var p = RD_PORT_FROM; p <= RD_PORT_TO; p++) probes.push(rdProbePort(p));
+      return $.when.apply($, probes).then(function() {
+        var found = {};
+        Array.prototype.slice.call(arguments).forEach(function(dev) {
+          if (!dev) return;
+          var cur = found[dev.mode];
+          if (!cur || (cur.status !== 'READY' && dev.status === 'READY')) found[dev.mode] = dev;
+        });
+        window.RD_DEVICES = found;
+        return found;
+      });
+    }
+
+    function bioDeviceFor(mode) {
+      var dev = window.RD_DEVICES && window.RD_DEVICES[mode];
+      return dev && dev.status === 'READY' ? dev : null;
+    }
+
+    function renderBioStatus() {
+      var mode = abhaAuthMode();
+      var $s = $('#bioDeviceStatus');
+      if (mode === 'otp') {
+        $s.hide();
+        return;
+      }
+      $s.removeClass('ready missing checking').show();
+      if (window.RD_DEVICES === null) {
+        $s.addClass('checking');
+        $('#bioDeviceStatusText').text('Looking for ' + rdModeLabel(mode).toLowerCase() + ' scanner…');
+        return;
+      }
+      var any = window.RD_DEVICES[mode];
+      var dev = bioDeviceFor(mode);
+      if (dev) {
+        $s.addClass('ready');
+        $('#bioDeviceStatusText').text('✓ ' + (dev.model || rdModeLabel(mode) + ' scanner') + ' ready (port ' + dev.port + ')');
+      } else if (any) {
+        $s.addClass('missing');
+        $('#bioDeviceStatusText').text((any.model || rdModeLabel(mode) + ' scanner') + ' found but not ready (' + (any.status || 'UNKNOWN') + ') — check the cable / RD Service.');
+      } else {
+        $s.addClass('missing');
+        $('#bioDeviceStatusText').text(rdModeLabel(mode) + ' scanner not detected. Connect it and make sure its RD Service is running.');
+      }
+    }
+
+    function abhaRefreshDevices() {
+      window.RD_DEVICES = null;
+      renderBioStatus();
+      refreshCreateAbhaBtn();
+      return rdDiscover().always(function() {
+        renderBioStatus();
+        refreshCreateAbhaBtn();
+      });
+    }
+
+    // Button label + device status follow the selected method; discovery runs the
+    // first time a biometric method is picked (and on "Re-check").
+    function abhaApplyAuthMode() {
+      var mode = abhaAuthMode();
+      var label = mode === 'otp' ? 'Send Aadhaar OTP' : 'Capture ' + rdModeLabel(mode);
+      $('#create_abha').html('<i class="ri-' + (mode === 'otp' ? 'send-plane' : 'fingerprint') + '-line"></i> ' + label);
+      if (mode !== 'otp' && window.RD_DEVICES === null && !window.__rdDiscovering) {
+        window.__rdDiscovering = true;
+        abhaRefreshDevices().always(function() {
+          window.__rdDiscovering = false;
+        });
+      }
+      renderBioStatus();
+      if (window.refreshCreateAbhaBtn) refreshCreateAbhaBtn();
+    }
+    $('input[name="abha_auth_mode"]').on('change', abhaApplyAuthMode);
+    $('#bioDeviceRecheck').on('click', function() {
+      abhaRefreshDevices();
+    });
+
+    // omitEnv: leave env out so the RD service uses the environment it is
+    // configured for (used when the device rejects RD_ENV with -1524).
+    function rdPidOptions(mode, omitEnv) {
+      var finger = mode === 'finger';
+      // No XML declaration: inside a .php file it would read as a PHP short open tag.
+      return '<PidOptions ver="1.0">' +
+        '<Opts fCount="' + (finger ? 1 : 0) + '" fType="' + (finger ? 2 : '') + '"' +
+        ' iCount="' + (finger ? 0 : 1) + '" iType="' + (finger ? '' : 0) + '"' +
+        ' pCount="0" pType="" format="0" pidVer="2.0"' +
+        ' timeout="' + (RD_CAPTURE_TIMEOUT_MS - 2000) + '" posh="UNKNOWN"' +
+        (omitEnv ? '' : ' env="' + RD_ENV + '"') +
+        // wadh="" makes the RD service emit an empty wadh, which UIDAI refuses
+        // (552 "Invalid wadh element"); with no value the attribute is left out.
+        (RD_WADH ? ' wadh="' + RD_WADH + '"' : '') + ' />' +
+        '<CustOpts></CustOpts>' +
+        '</PidOptions>';
+    }
+
+    // Capture one PID block from the scanner for the selected mode.
+    function abhaBiometricCapture(mode, aadhaar, mobile) {
+      var dev = bioDeviceFor(mode);
+      if (!dev) {
+        renderBioStatus();
+        toast(rdModeLabel(mode) + ' scanner is not ready. Connect it and click Re-check.');
+        return;
+      }
+      var $txt = $('#loader-wrapper .loader-txt');
+      var oldTxt = $txt.text();
+      $txt.text(mode === 'iris' ? 'Ask the patient to look into the iris scanner…' : 'Place the finger on the scanner…');
+      showLoader();
+      var omitEnv = false;
+      var capture = function() {
+        return rdCall('CAPTURE', dev.base + dev.capturePath, rdPidOptions(mode, omitEnv), RD_CAPTURE_TIMEOUT_MS);
+      };
+      // -1524 "Invalid value for Env": the device is locked to another UIDAI
+      // environment than RD_ENV (e.g. a production-only RD service while the
+      // ABDM sandbox asks for PP). Retry once and let the device use its own.
+      var attempt = capture().then(function(text) {
+        if (/errCode="-1524"/.test(text || '')) {
+          console.warn('RD service rejected env="' + RD_ENV + '" — retrying with the device\'s own environment.');
+          omitEnv = true;
+          return capture();
+        }
+        return text;
+      });
+      attempt.done(function(text) {
+        var doc = rdParseXml(text);
+        var resp = doc && doc.getElementsByTagName('Resp')[0];
+        if (!resp) {
+          toast('Scanner returned an unreadable response. Please try again.');
+          return;
+        }
+        var errCode = resp.getAttribute('errCode');
+        if (errCode !== '0') {
+          toast('Capture failed: ' + (resp.getAttribute('errInfo') || 'error') + ' (' + errCode + ')');
+          return;
+        }
+        var qScore = parseInt(resp.getAttribute('qScore'), 10) || 0;
+        var bio = {
+          mode: mode,
+          pid: text,
+          qScore: qScore,
+          device: dev.model,
+          aadhaar: aadhaar,
+          mobile: mobile
+        };
+        if (qScore && qScore < RD_MIN_QSCORE) {
+          toast('Low capture quality (' + qScore + '). Clean the scanner and re-scan for a better result.', 'error', {
+            label: 'Use anyway',
+            onClick: function() {
+              abhaSubmitBiometric(bio);
+            }
+          });
+          return;
+        }
+        abhaSubmitBiometric(bio);
+      }).fail(function(xhr, status) {
+        // A rejection forwarded through .then() only carries the jqXHR.
+        status = status || (xhr && xhr.statusText);
+        toast(status === 'timeout' ?
+          'Scanner timed out — no ' + (mode === 'iris' ? 'iris' : 'finger') + ' detected. Please try again.' :
+          'Could not reach the scanner RD Service. Click Re-check and try again.');
+      }).always(function() {
+        hideLoader();
+        $txt.text(oldTxt);
+      });
+    }
+
+    // Hand the captured PID to ABDM biometric enrolment (enrol/byAadhaar, "bio").
+    // A PID block is single-use (UIDAI rejects replays), so every attempt — good
+    // or bad — needs a fresh capture. On success the flow continues exactly as
+    // after a verified Aadhaar OTP (card, mobile check, ABHA address picker).
+    function abhaSubmitBiometric(bio) {
+      window.ABHA_BIO = bio;
+      $('#bioDeviceStatus').removeClass('missing checking').addClass('ready').show();
+      $('#bioDeviceStatusText').text('✓ ' + rdModeLabel(bio.mode) + ' captured' + (bio.qScore ? ' — quality ' + bio.qScore : '') + '.');
+      if (!BIO_ENROLL_ENABLED) {
+        window.ABHA_BIO = null;
+        toast(rdModeLabel(bio.mode) + ' captured successfully. Biometric ABHA creation is not enabled yet — use Aadhaar OTP for now.', 'info');
+        return;
+      }
+
+      showLoader();
+      withAbdmToken(function(accessToken) {
+        $.ajax({
+          url: 'abha_integration.php',
+          method: 'POST',
+          contentType: 'application/json',
+          dataType: 'json',
+          data: JSON.stringify({
+            page: 'enroll_bio',
+            aadhaar: bio.aadhaar,
+            mobile: bio.mobile,
+            bioType: bio.mode,
+            pid: bio.pid,
+            accessToken: accessToken
+          }),
+          success: function(response) {
+            window.ABHA_BIO = null;
+            if (response && response.success && response.data && response.data.ABHAProfile) {
+              // Enrolment txnId drives the mobile-verify + ABHA-address steps.
+              $('#txnId').val(response.data.txnId || '');
+              $('#mobileTxnId').val('');
+              window.MOBILE_OTP_VERIFIED = false;
+              handleAbhaCreated(response.data);
+            } else {
+              var info = abdmErrorText(response || {});
+              toast((info.message ?
+                  rdModeLabel(bio.mode) + ' authentication failed: ' + info.message + (info.code ? ' (' + info.code + ')' : '') :
+                  rdModeLabel(bio.mode) + ' authentication failed.') +
+                ' Please capture again or use Aadhaar OTP.');
+              hideLoader();
+            }
+          },
+          error: function(xhr) {
+            window.ABHA_BIO = null;
+            console.error(xhr.status, xhr.statusText); // never log the request (PID)
+            toast(rdModeLabel(bio.mode) + ' authentication error: ' + abdmErrMsg(xhr, 'Please capture again or use Aadhaar OTP.'));
+            hideLoader();
+          }
+        });
+      });
+    }
 
     $('#create_abha').on('click', function(e) {
       e.preventDefault();
@@ -3203,6 +3583,13 @@ date_default_timezone_set(env('TZ', 'Asia/Kolkata'));
       // TC-002: log the consent acceptance once (not on Resend re-trigger).
       if (!window.__aadhaarResend && window.storeConsent) {
         storeConsent('create');
+      }
+
+      // Biometric method: capture from the RD-service scanner instead of sending an OTP.
+      // (Resend OTP re-triggers this button and must always stay on the OTP path.)
+      if (abhaAuthMode() !== 'otp' && !window.__aadhaarResend) {
+        abhaBiometricCapture(abhaAuthMode(), aadhaar, regMobile);
+        return;
       }
 
       showLoader(); // start loader at beginning
@@ -3362,7 +3749,9 @@ date_default_timezone_set(env('TZ', 'Asia/Kolkata'));
       var reqDone = $('.consentChk[data-required="1"]:checked').length;
       var consentOk = reqTotal > 0 && reqDone === reqTotal;
       var nameOk = ($('#consent_beneficiary_name').val() || '').trim().length > 0;
-      $('#create_abha').prop('disabled', !(aadhaarOk && mobileOk && consentOk && nameOk));
+      // Biometric methods also need their scanner detected and READY.
+      var deviceOk = abhaAuthMode() === 'otp' || !!bioDeviceFor(abhaAuthMode());
+      $('#create_abha').prop('disabled', !(aadhaarOk && mobileOk && consentOk && nameOk && deviceOk));
     }
     window.refreshCreateAbhaBtn = refreshCreateAbhaBtn;
     $('#aadhaar, #reg_mobile, #consent_beneficiary_name').on('input', refreshCreateAbhaBtn);

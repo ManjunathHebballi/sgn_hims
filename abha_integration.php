@@ -515,6 +515,42 @@ if ($page === 'get_token') {
     echo $response;
     exit;
 
+// ── enroll_bio (create ABHA by Aadhaar fingerprint / iris) ────────────────────
+// `pid` is the PidData XML captured by the UIDAI RD service on the operator's
+// PC. It is already encrypted for UIDAI — forward it untouched, never log it.
+} elseif ($page === 'enroll_bio') {
+    $aadhaar     = isset($input['aadhaar']) ? preg_replace('/[^0-9]/', '', $input['aadhaar']) : '';
+    $mobile      = isset($input['mobile']) ? preg_replace('/[^0-9]/', '', $input['mobile']) : '';
+    $bioType     = (isset($input['bioType']) && in_array($input['bioType'], ['finger', 'iris'], true)) ? $input['bioType'] : '';
+    $pid         = isset($input['pid']) && is_string($input['pid']) ? $input['pid'] : '';
+    $accessToken = $input['accessToken'] ?? '';
+
+    if (strlen($aadhaar) !== 12 || $bioType === '' || $pid === ''
+        || strlen($pid) > 200000 || strpos($pid, '<PidData') === false) {
+        exit(json_encode(["success" => false, "message" => "Invalid biometric enrollment request"]));
+    }
+
+    $body = ["aadhaar" => $aadhaar, "bioType" => $bioType, "pid" => $pid];
+    if (preg_match('/^[6-9][0-9]{9}$/', $mobile)) {
+        $body["mobile"] = $mobile;
+    }
+
+    $ch = curl_init("$baseurl/api/milestone1/abha/enrollment/create-by-biometric");
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER     => [
+            "Content-Type: application/json",
+            "X-API-Key: $apiKey",
+            "Authorization: Bearer $accessToken",
+        ],
+        CURLOPT_POSTFIELDS     => json_encode($body),
+    ]);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    echo $response;
+    exit;
+
 // ── abha_suggestion (TC-008: fetch suggested ABHA addresses) ───────────────────
 } elseif ($page === 'abha_suggestion') {
     $txnId       = isset($input['txnId']) ? preg_replace('/[^a-zA-Z0-9\-]/', '', $input['txnId']) : '';
