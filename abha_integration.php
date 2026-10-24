@@ -28,8 +28,18 @@ function esc($str) {
  *   DIS-…/{patientId}, HDR-DIS/, IPPRES/, IPWELL/ → central_ipd.ipd_no
  *   OPCON-/WELL-/PRES-/IMMUNI-/HDR-…/{opdId} → central_opd.id
  */
-function ccGroupLinked(mysqli $con, string $ref, string $hiType): bool
+function ccGroupLinked(mysqli $con, string $ref, string $hiType, array $careContexts = []): bool
 {
+    // Uploaded documents: one group holds every document of the IP patient, so
+    // it is linked only when each document in it is.
+    if (ccIsDocumentGroup($ref, $hiType)) {
+        $ids = ccDocumentIds($ref, $careContexts);
+        if (!$ids) return false;
+        $q   = mysqli_query($con, "SELECT COUNT(*) AS n FROM `patient_documents` WHERE `id` IN (" . implode(',', $ids) . ") AND `abha_linked`=1");
+        $row = $q ? mysqli_fetch_assoc($q) : null;
+        return $row && (int) $row['n'] === count($ids);
+    }
+
     $target = ccGroupTarget($ref, $hiType);
     if (!$target) return false;
     [$tbl, $col, $id] = $target;
@@ -62,6 +72,43 @@ function ccGroupTarget(string $ref, string $hiType): ?array
 }
 
 /**
+ * An uploaded patient document group (patient_documents.php, discharge summary
+ * file): `HDR-{yyyymmdd}/{ipd_no}`, as api/patient_history.php emits it, whose
+ * careContext refs are patient_documents ids. The HDR-DIS / HDR-DIAG / HDR-OPC
+ * groups are different records and are matched by ccGroupTarget().
+ */
+function ccIsDocumentGroup(string $ref, string $hiType): bool
+{
+    return $hiType === 'HealthDocumentRecord' && preg_match('#^HDR-\d{8}/#', $ref) === 1;
+}
+
+/** patient_documents ids in a document group, or every document of that IP patient when the group has none listed. */
+function ccDocumentIds(string $ref, array $careContexts): array
+{
+    $ids = [];
+    foreach ($careContexts as $cc) {
+        $id = (string) ($cc['referenceNumber'] ?? '');
+        if (ctype_digit($id)) $ids[] = (int) $id;
+    }
+    if ($ids) return array_values(array_unique($ids));
+
+    $ipdNo = substr($ref, strrpos($ref, '/') + 1);
+    if ($ipdNo === '') return [];
+    $db  = new userlogin();
+    $con = $db->dbconnect();
+    $st  = $con->prepare("SELECT `id` FROM `patient_documents` WHERE `patient_no`=?");
+    if ($st) {
+        $st->bind_param('s', $ipdNo);
+        $st->execute();
+        $res = $st->get_result();
+        while ($res && $r = $res->fetch_assoc()) $ids[] = (int) $r['id'];
+        $st->close();
+    }
+    mysqli_close($con);
+    return $ids;
+}
+
+/**
  * Record that the given care-context groups were submitted to ABDM, the same
  * flag the automatic link (optreatmentClass1::linkAbhaContextGroups) writes.
  * The ABHA report and ccGroupLinked() read it.
@@ -69,7 +116,16 @@ function ccGroupTarget(string $ref, string $hiType): ?array
 function ccGroupsMarkLinked(mysqli $con, array $groups): void
 {
     foreach ($groups as $grp) {
-        $target = ccGroupTarget((string) ($grp['referenceNumber'] ?? ''), (string) ($grp['hiType'] ?? ''));
+        $ref    = (string) ($grp['referenceNumber'] ?? '');
+        $hiType = (string) ($grp['hiType'] ?? '');
+        if (ccIsDocumentGroup($ref, $hiType)) {
+            $ids = ccDocumentIds($ref, is_array($grp['careContexts'] ?? null) ? $grp['careContexts'] : []);
+            if ($ids) {
+                mysqli_query($con, "UPDATE `patient_documents` SET `abha_linked`=1 WHERE `id` IN (" . implode(',', $ids) . ")");
+            }
+            continue;
+        }
+        $target = ccGroupTarget($ref, $hiType);
         if (!$target) continue;
         [$tbl, $col, $id] = $target;
         $st = $con->prepare("UPDATE `$tbl` SET `abha_linked`=1 WHERE `$col`=? LIMIT 1");
@@ -1012,7 +1068,8 @@ if ($page === 'get_token') {
                 $grp['linked'] = ccGroupLinked(
                     $ccCon,
                     (string) ($grp['referenceNumber'] ?? ''),
-                    (string) ($grp['hiType'] ?? '')
+                    (string) ($grp['hiType'] ?? ''),
+                    is_array($grp['careContexts'] ?? null) ? $grp['careContexts'] : []
                 );
             }
             unset($grp);
@@ -1076,7 +1133,8 @@ if ($page === 'get_token') {
         $grp['linked'] = ccGroupLinked(
             $con,
             (string) ($grp['referenceNumber'] ?? ''),
-            (string) ($grp['hiType'] ?? '')
+            (string) ($grp['hiType'] ?? ''),
+            is_array($grp['careContexts'] ?? null) ? $grp['careContexts'] : []
         );
     }
     unset($grp);
