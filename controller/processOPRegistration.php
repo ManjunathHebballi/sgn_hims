@@ -6,6 +6,7 @@ $newOP = new addOP;
 if($_REQUEST['submit']=='opreg')
 {
 $newOP->setadmdate($_REQUEST['admdate']);
+$newOP->setuhid(isset($_REQUEST['uhid']) ? $_REQUEST['uhid'] : '');
 $newOP->setcard($_REQUEST['card']);
 $newOP->setfname($_REQUEST['fname']);
 $newOP->setage($_REQUEST['age']);

@@ -1,6 +1,6 @@
 <?php
 require_once(__DIR__ . '/session_config.php');
-include('dbconnect.php');
+include_once('dbconnect.php');
 
 
 class discharge{
@@ -200,6 +200,138 @@ class discharge{
         $sql="SELECT id,code,details,substring(details, 1, 100) as data FROM `icd_codes` GROUP by substring(details,1,20) ";
         $res=mysqli_query($con,$sql);
         return $res;
+    }
+
+    function ensurePatientDocumentsTable()
+    {
+        $newlogin = new userlogin;
+        $con = $newlogin->dbconnect();
+
+        $sql = "CREATE TABLE IF NOT EXISTS `patient_documents` (
+            `id` INT(11) NOT NULL AUTO_INCREMENT,
+            `patient_type` VARCHAR(10) NOT NULL DEFAULT 'IP',
+            `patient_no` VARCHAR(100) NOT NULL,
+            `patient_name` VARCHAR(255) NOT NULL,
+            `document_name` VARCHAR(255) NOT NULL,
+            `file_path` VARCHAR(500) NOT NULL,
+            `uploaded_by` VARCHAR(100) NOT NULL,
+            `uploaded_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `abha_linked` TINYINT(1) NOT NULL DEFAULT 0,
+            `linkRequestId` VARCHAR(100) NULL DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            INDEX `idx_patient_no` (`patient_no`),
+            INDEX `idx_uploaded_at` (`uploaded_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=latin1";
+        $res = mysqli_query($con, $sql);
+
+        // Tables created before ABHA linking lack the columns that
+        // optreatmentClass1::linkAbhaContextGroups() reads and writes back.
+        $cols = array(
+            'abha_linked'   => "TINYINT(1) NOT NULL DEFAULT 0",
+            'linkRequestId' => "VARCHAR(100) NULL DEFAULT NULL",
+        );
+        foreach ($cols as $col => $def) {
+            $chk = mysqli_query($con, "SHOW COLUMNS FROM `patient_documents` LIKE '$col'");
+            if ($chk && mysqli_num_rows($chk) === 0) {
+                mysqli_query($con, "ALTER TABLE `patient_documents` ADD COLUMN `$col` $def");
+            }
+        }
+
+        mysqli_close($con);
+        return $res;
+    }
+
+    // Returns the IP patient's name plus the central_opd.id whose ABHA the
+    // document is linked under (central_ipd.opd_no -> central_opd).
+    function getIpdPatientByNo($ipdNo)
+    {
+        $newlogin = new userlogin;
+        $con = $newlogin->dbconnect();
+
+        $stmt = $con->prepare("SELECT ci.`name`, ci.`opd_no`, co.`id` AS opd_id FROM `central_ipd` ci LEFT JOIN `central_opd` co ON co.`opd_no` = ci.`opd_no` WHERE ci.`ipd_no` = ? ORDER BY co.`id` DESC LIMIT 1");
+        $stmt->bind_param('s', $ipdNo);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = ($res && $res->num_rows > 0) ? $res->fetch_assoc() : null;
+
+        $stmt->close();
+        mysqli_close($con);
+        return $row;
+    }
+
+    function insertPatientDocument($patientNo, $patientName, $documentName, $relativePath, $uploadedBy)
+    {
+        $newlogin = new userlogin;
+        $con = $newlogin->dbconnect();
+
+        $stmt = $con->prepare("INSERT INTO `patient_documents` (`patient_type`, `patient_no`, `patient_name`, `document_name`, `file_path`, `uploaded_by`) VALUES ('IP', ?, ?, ?, ?, ?)");
+        $stmt->bind_param('sssss', $patientNo, $patientName, $documentName, $relativePath, $uploadedBy);
+
+        $ok = $stmt->execute();
+        $insertId = $ok ? (int) $stmt->insert_id : 0;
+
+        $stmt->close();
+        mysqli_close($con);
+
+        return $ok ? $insertId : false;
+    }
+
+    function getRecentIpdPatients($limit = 500)
+    {
+        $limit = (int) $limit;
+        if ($limit <= 0) {
+            $limit = 500;
+        }
+
+        $newlogin = new userlogin;
+        $con = $newlogin->dbconnect();
+        $sql = "SELECT `ipd_no`, `name`, `mobile`, `admission_date` FROM `central_ipd` ORDER BY `id` DESC LIMIT $limit";
+        $res = mysqli_query($con, $sql);
+
+        $patients = array();
+        if ($res) {
+            while ($row = mysqli_fetch_assoc($res)) {
+                $patients[] = $row;
+            }
+        }
+
+        mysqli_close($con);
+        return $patients;
+    }
+
+    function getPatientDocuments($patientNo = '', $limit = 100)
+    {
+        $newlogin = new userlogin;
+        $con = $newlogin->dbconnect();
+
+        $documents = array();
+        if (strlen(trim((string) $patientNo)) > 0) {
+            $stmt = $con->prepare("SELECT * FROM `patient_documents` WHERE `patient_no` = ? ORDER BY `id` DESC");
+            $stmt->bind_param('s', $patientNo);
+            $stmt->execute();
+            $res = $stmt->get_result();
+
+            while ($res && $row = $res->fetch_assoc()) {
+                $documents[] = $row;
+            }
+            $stmt->close();
+        } else {
+            $limit = (int) $limit;
+            if ($limit <= 0) {
+                $limit = 100;
+            }
+
+            $sql = "SELECT * FROM `patient_documents` ORDER BY `id` DESC LIMIT $limit";
+            $res = mysqli_query($con, $sql);
+            if ($res) {
+                while ($row = mysqli_fetch_assoc($res)) {
+                    $documents[] = $row;
+                }
+            }
+        }
+
+        mysqli_close($con);
+        return $documents;
     }
 }
 ?>

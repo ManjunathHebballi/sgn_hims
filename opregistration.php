@@ -220,7 +220,14 @@ elseif(isset($_REQUEST['success'])&&$_REQUEST['success']=='0')
            <div class="form-group">
                   <label> Date</label>
                   <input class="form-control" type="date"  name="admdate" id="admdate"  value="<?php echo date('Y-m-d')?>">
-                  
+
+            </div>
+        </div>
+
+        <div class="col-md-3">
+           <div class="form-group">
+                  <label> UHID <span class="text-danger">*</span></label>
+                  <input class="form-control text-uppercase" type="text" name="uhid" id="uhid" placeholder="Enter UHID" maxlength="50" required oninput="this.value=this.value.replace(/\s+/g,'')">
             </div>
         </div>
 

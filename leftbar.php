@@ -190,7 +190,6 @@ if (!isset($_SESSION['loginid'])) {
                                 <a class="dropdown-item" href="./opfollowup.php">OP Follow Up</a>
                                 <a class="dropdown-item" href="./oppatient.php">Patient List</a>
                                 <a class="dropdown-item" href="./patient_history.php">Patient History</a>
-                                <a class="dropdown-item" href="./bulk_registration.php">Bulk OPD / IPD Upload</a>
                             </div>
                         </li>
 
@@ -203,7 +202,6 @@ if (!isset($_SESSION['loginid'])) {
                                     class="icofont-crutch mr-2"></i><span class="nav-text">IN Patient</span></a>
                             <div class="dropdown-menu  " aria-labelledby="topnav-uielement">
                                 <a class="dropdown-item" href="./ipregistration.php">IP Registration</a>
-                                <a class="dropdown-item" href="./bulk_registration.php">Bulk OPD / IPD Upload</a>
                                 <a class="dropdown-item" href="./ippatient.php">IP Patient List</a>
                                 <a class="dropdown-item" href="./ippatient.php?id=3">IP LAB</a>
                                 <a class="dropdown-item" href="./ippatient.php?id=4">IP Treatment</a>

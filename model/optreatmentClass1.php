@@ -3,7 +3,7 @@
 // so include it BEFORE anything else. This file used to call session_start()
 // itself on the line above the include, which started the session too early for
 // session_set_cookie_params() to take effect.
-include('dbconnect.php');
+include_once('dbconnect.php');
 date_default_timezone_set('asia/kolkata');
 
 
@@ -1741,8 +1741,8 @@ $con->close();
      * grouped INV-{date}/{patient_id} form was replaced by INV/{billId} because
      * it put the patient id where the bill id was expected.
      *
-     * @param string $kind  invoice | diagnostic | discharge
-     * @param string $id    bill id, sample_status id, or ipd_no
+     * @param string $kind  invoice | diagnostic | discharge | document
+     * @param string $id    bill id, sample_status id, ipd_no, or patient_documents id
      * @param int    $opdId central_opd.id — the patient whose ABHA is used
      */
     function linkAbhaSingleContext($kind, $id, $opdId, $patientLabel = '')
@@ -1799,6 +1799,47 @@ $con->close();
                     'count'  => 1,
                 ];
                 $mark = ['table' => 'central_ipd', 'col' => 'ipd_no', 'val' => $id];
+                break;
+
+            case 'document':
+                // Uploaded patient document (patient_documents.php). Group ref,
+                // inner ref (the row id) and display mirror patient_history.php's
+                // HealthDocumentRecord entries.
+                $newlogin = new userlogin;
+                $dcon = $newlogin->dbconnect();
+                $docId = (int) $id;
+                $stmt = $dcon->prepare("SELECT `patient_no`, `document_name`, `uploaded_by`, `uploaded_at` FROM `patient_documents` WHERE `id`=? LIMIT 1");
+                $stmt->bind_param('i', $docId);
+                $stmt->execute();
+                $dres = $stmt->get_result();
+                $doc = $dres ? $dres->fetch_assoc() : null;
+                $stmt->close();
+                mysqli_close($dcon);
+                if (!$doc) {
+                    return false;
+                }
+
+                $parts = [];
+                if (!empty($doc['uploaded_at'])) {
+                    $parts[] = date('d.m.Y', strtotime((string) $doc['uploaded_at']));
+                }
+                if (!empty($doc['document_name'])) {
+                    $parts[] = $doc['document_name'];
+                }
+                if (!empty($doc['uploaded_by'])) {
+                    $parts[] = 'Uploaded by- ' . $doc['uploaded_by'];
+                }
+                $group = [
+                    'referenceNumber' => 'HDR-' . date('Ymd') . '/' . $doc['patient_no'],
+                    'display'         => 'Health Document Record for Patient ID: ' . $doc['patient_no'],
+                    'careContexts'    => [[
+                        'referenceNumber' => (string) $docId,
+                        'display'         => implode(', ', $parts),
+                    ]],
+                    'hiType' => 'HealthDocumentRecord',
+                    'count'  => 1,
+                ];
+                $mark = ['table' => 'patient_documents', 'col' => 'id', 'val' => (string) $docId];
                 break;
 
             default:

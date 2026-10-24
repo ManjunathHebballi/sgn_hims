@@ -6,10 +6,15 @@ date_default_timezone_set("Asia/Kolkata");
 class addOP
 {
 
-  private $admdate, $card, $fname, $age, $dob, $abha_number, $abha_address, $state, $district, $pincode, $sex, $address, $diagnosis, $department, $religion, $caste, $pname, $edu, $marital, $occupation, $economic, $cardn, $annual, $category, $mobile, $doctor, $opd_no, $subdepartment, $ptype, $pcomment, $pan, $aadhar, $policy, $mlc, $city, $consultancy;
+  private $admdate, $card, $fname, $age, $dob, $abha_number, $abha_address, $state, $district, $pincode, $sex, $address, $diagnosis, $department, $religion, $caste, $pname, $edu, $marital, $occupation, $economic, $cardn, $annual, $category, $mobile, $doctor, $opd_no, $subdepartment, $ptype, $pcomment, $pan, $aadhar, $policy, $mlc, $city, $consultancy, $uhid;
   function setadmdate($admdate)
   {
     $this->admdate = $admdate;
+  }
+  // UHID is entered by the user on the OP registration form, not generated.
+  function setuhid($uhid)
+  {
+    $this->uhid = strtoupper(preg_replace('/\s+/', '', (string) $uhid));
   }
   function setcard($card)
   {
@@ -227,15 +232,25 @@ class addOP
     $newlogin = new userlogin;
     $date = $this->admdate;
     $con = $newlogin->dbconnect();
-    $query = "SELECT * FROM data_table WHERE id=1 || id=4 order by id";
+    $uhid = mysqli_real_escape_string($con, (string) $this->uhid);
+    if ($uhid === '') {
+      echo "<script>alert('Please enter the UHID.');history.back();</script>";
+      return;
+    }
+    $existing = mysqli_query($con, "SELECT `opd_no` FROM `central_opd` WHERE `uhid`='$uhid' LIMIT 1");
+    if ($existing && mysqli_num_rows($existing) > 0) {
+      $existingRow = mysqli_fetch_assoc($existing);
+      $existingOpd = addslashes(htmlspecialchars((string) $existingRow['opd_no']));
+      $uhidMsg = addslashes(htmlspecialchars((string) $this->uhid));
+      echo "<script>alert('UHID $uhidMsg is already registered (OP No: $existingOpd). Enter a different UHID or add a follow up for that patient.');history.back();</script>";
+      return;
+    }
+
+    $query = "SELECT * FROM data_table WHERE id=1";
     $iddata = mysqli_query($con, $query);
 
     while ($central_opd = mysqli_fetch_assoc($iddata)) {
-      if ($central_opd['id'] == 1) {
-        $opd_no = $central_opd['table_id'] + 1;
-      } elseif ($central_opd['id'] == 4) {
-        $uhid = $central_opd['table_id'] + 1;
-      }
+      $opd_no = $central_opd['table_id'] + 1;
     }
     $y = date("Ymd", strtotime($date));
     if ($y !== substr((string)$opd_no, 0, 8)) {
@@ -245,15 +260,6 @@ class addOP
         $opd_no = $op_no['opd'] + 1;
       } else {
         $opd_no = $y . '0001';
-      }
-    }
-    if ($y != substr($uhid, 0, 8)) {
-      $data = "SELECT SUBSTR(MAX(uhid),4,12) as uhid FROM central_opd where uhid like '%$y%'";
-      $op_no = mysqli_fetch_assoc(mysqli_query($con, $data));
-      if (isset($op_no['uhid'])) {
-        $uhid = $op_no['uhid'] + 1;
-      } else {
-        $uhid = $y . '0001';
       }
     }
     $sql1 = "select ifnull(max(token),0) as tok from central_opd where date(date)='$date' and doctor='$this->doctor' and is_generated=0 ";
@@ -312,7 +318,7 @@ class addOP
         "phone_number" => $phoneClean,
         "address" => (string)$this->address,
         "gender" => $gender,
-        "unique_code" => "SGN" . $uhid
+        "unique_code" => (string) $this->uhid
       );
 
       $customerUrl = 'https://api.retailxpress.ai/v1/external/customer';
@@ -354,7 +360,7 @@ class addOP
 
     while ($insertAttempts < $maxInsertRetries) {
       $sql = "INSERT INTO `central_opd`(`uhid`,`opd_no`,`date`, `name`, `dob`, `age`, `gender`, `address`, `diagnosis`, `dept_id`, `sub_deptid`, `religion`, `caste`, `parent_name`, `education`, `marital_status`, `occupation`, `economic_state`, `bpl_no`,`annual_income`,`category`,`mobile`,`doctor`,`created_by`,`pan`,`aadhar`,`policy`,`patient_type`,`created_at`,`token`,`city`,`mlc`,`rx_id`,`abha_number`,`abha_address`,`state`,`district`,`pincode`)
-        VALUES ('SGN$uhid','OP$opd_no','$this->admdate','$this->fname',$dobSql,'$this->age','$this->sex','$this->address','$this->diagnosis','$this->department','$this->subdepartment','$this->religion','$this->caste','$this->pname','$this->edu','$this->marital','$this->occupation','$this->economic','$this->cardn','$this->annual','$this->category','$this->mobile','$this->doctor','$_SESSION[name]','$this->pan','$this->aadhar','$this->policy','$this->ptype',now(),'$token','$this->city','$this->mlc','$customerId','$abhaNumber','$abhaAddress','$stateVal','$districtVal','$pincodeVal')";
+        VALUES ('$uhid','OP$opd_no','$this->admdate','$this->fname',$dobSql,'$this->age','$this->sex','$this->address','$this->diagnosis','$this->department','$this->subdepartment','$this->religion','$this->caste','$this->pname','$this->edu','$this->marital','$this->occupation','$this->economic','$this->cardn','$this->annual','$this->category','$this->mobile','$this->doctor','$_SESSION[name]','$this->pan','$this->aadhar','$this->policy','$this->ptype',now(),'$token','$this->city','$this->mlc','$customerId','$abhaNumber','$abhaAddress','$stateVal','$districtVal','$pincodeVal')";
 
       $res = mysqli_query($con, $sql);
       if ($res) {
@@ -367,7 +373,6 @@ class addOP
       }
 
       $opd_no = $this->getNextCentralOpdSequence($con, $date, 'opd_no');
-      $uhid = $this->getNextCentralOpdSequence($con, $date, 'uhid');
       $insertAttempts++;
     }
     if ($con->connect_error) {
@@ -387,8 +392,6 @@ class addOP
 
       $query3 = "UPDATE data_table set table_id=$opd_no WHERE id=1";
       mysqli_query($con, $query3);
-      $query4 = "UPDATE data_table set table_id=$uhid WHERE id=4";
-      mysqli_query($con, $query4);
       $con->close();
 
 
@@ -913,11 +916,15 @@ LEFT JOIN billing b
     $sql = "DELETE from central_opd where id='$id'";
     $res = mysqli_query($con, $sql);
     $opd = substr($row['opd_no'], 2, 12) - 1;
-    $uhid = substr($row['uhid'], 3, 13) - 1;
     $query = "UPDATE data_table set table_id=$opd WHERE id=1";
     mysqli_query($con, $query);
-    $query = "UPDATE data_table set table_id=$uhid WHERE id=4";
-    mysqli_query($con, $query);
+    // Only roll back the UHID counter for system-generated UHIDs (SGN + yyyymmdd + seq);
+    // UHIDs typed in on OP registration don't use the counter.
+    if (preg_match('/^SGN\d{12}$/', (string) $row['uhid'])) {
+      $uhid = substr($row['uhid'], 3, 13) - 1;
+      $query = "UPDATE data_table set table_id=$uhid WHERE id=4";
+      mysqli_query($con, $query);
+    }
     return $res;
   }
   function selectDoctor()

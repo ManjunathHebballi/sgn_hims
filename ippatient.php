@@ -285,6 +285,7 @@ $dept=$newOP->selectIPreg1_search($op_from,$op_to,$search);
                                                      ?>
                                                      
                                                      <a href="editIPPatient.php?id=<?= $res['id']?>&from=<?=$op_from?>&to=<?=$op_to?>&search=<?=$search?>" title="Add Re-Entry" class="badge badge-primary">Edit</a>&nbsp;
+                                                     <a href="patient_documents.php?ipd_no=<?= urlencode($res['ipd_no']) ?>" title="Patient Documents" class="badge badge-pill badge-light">Documents</a>&nbsp;
                                                      <?php }
                                                      if($_SESSION['role']=='Admin' || $_SESSION['role']=='MRD') {
                                                      if($res['is_generated']==1)
