@@ -282,11 +282,12 @@ $dept = $newOP->selectIPreg1_search($op_from, $op_to, $search);
                                                                 ?>
                                                                 <a href="print_admission_slip.php?id=<?= $res['id'] ?>" target="_blank" title="Print Admission Card" class="badge badge-warning">Print</a>&nbsp;
                                                                 <a href="print_address_graph.php?id=<?= $res['id'] ?>" target="_blank" title="Print Address Graph" class="badge badge-pill badge-success">Address Graph</a>&nbsp;
-                                                                <a href="discharge.php?id=<?= $res['ipd_no'] ?>" title="Add Re-Entry" class="badge badge-pill badge-secondary ">Discharge </a>&nbsp;
-                                                                <?php if ($res['discharge'] == 0 && $res['final_bill'] == 0 && $_SESSION['role'] != 'Generated' && $_SESSION['role'] != 'Doctor') { ?><a href="billing/ip_billing.php?id=<?= $res['ipd_no'] ?>" title="Add Re-Entry" class="badge badge-pill badge-info ">Save IP Bill </a>&nbsp;<?php } ?>
-                                                                    <?php if ($res['discharge'] == 0 && $res['final_bill'] == 0 && $_SESSION['role'] != 'Generated' && $_SESSION['role'] != 'Doctor') { ?><a href="transfer_bed.php?id=<?= $res['ipd_no'] ?>" title="Add Re-Entry" class="badge badge-pill badge-dark">Transfer Bed </a>&nbsp;<?php } ?>
-                                                                        <?php if ($res['discharge'] == 0 && $res['final_bill'] == 0 && $_SESSION['role'] != 'Generated' && $_SESSION['role'] != 'Doctor') { ?><a type="button" data-toggle="modal" data-target="#advance_amount" onclick="modalAdvance('<?= $res['ipd_no'] ?>','<?= $res['name'] ?>')" title="Add Advance Amount" class="badge badge-pill badge-danger ">Add Advance</a><?php } ?>
-                                                                    <?php } ?>
+                                                                <?php if ($res['discharge'] == 0) { ?><a href="discharge.php?id=<?= $res['ipd_no'] ?>" title="Add Re-Entry" class="badge badge-pill badge-secondary ">Discharge </a>&nbsp;<?php } ?>
+                                                                    <?php if ($res['discharge'] == 0 && $res['final_bill'] == 0 && $_SESSION['role'] != 'Generated' && $_SESSION['role'] != 'Doctor') { ?><a href="billing/ip_billing.php?id=<?= $res['ipd_no'] ?>" title="Add Re-Entry" class="badge badge-pill badge-info ">Save IP Bill </a>&nbsp;<?php } ?>
+                                                                        <?php if ($res['discharge'] == 0 && $res['final_bill'] == 0 && $_SESSION['role'] != 'Generated' && $_SESSION['role'] != 'Doctor') { ?><a href="transfer_bed.php?id=<?= $res['ipd_no'] ?>" title="Add Re-Entry" class="badge badge-pill badge-dark">Transfer Bed </a>&nbsp;<?php } ?>
+
+                                                                            <?php if ($res['discharge'] == 0 && $res['final_bill'] == 0 && $_SESSION['role'] != 'Generated' && $_SESSION['role'] != 'Doctor') { ?><a type="button" data-toggle="modal" data-target="#advance_amount" onclick="modalAdvance('<?= $res['ipd_no'] ?>','<?= $res['name'] ?>')" title="Add Advance Amount" class="badge badge-pill badge-danger ">Add Advance</a><?php } ?>
+                                                                        <?php } ?>
                                                         </div>
 
 
