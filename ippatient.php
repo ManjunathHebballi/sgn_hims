@@ -187,7 +187,7 @@ $dept = $newOP->selectIPreg1_search($op_from, $op_to, $search);
                                         <div class="col-md-4">
                                             <div class="form-group">
                                                 <label for="exampleInputEmail1"> Search </label>
-                                                <input type="text" class="form-control" name="search" id="search" placeholder="Search by Name, mobile, IPD No, Doctor, Address,OPD No etc" value="<?= $search ?>">
+                                                <input type="text" class="form-control" name="search" id="search" placeholder="Search by Name, mobile, UHID, IPD No, Doctor, Address,OPD No etc" value="<?= $search ?>">
 
                                             </div>
                                         </div>
@@ -221,6 +221,7 @@ $dept = $newOP->selectIPreg1_search($op_from, $op_to, $search);
                                         <thead>
                                             <tr>
                                                 <th>Sl NO</th>
+                                                <th>UHID</th>
                                                 <th>COPID</th>
                                                 <th>IPD No.</th>
                                                 <th>Visit Date</th>
@@ -247,6 +248,7 @@ $dept = $newOP->selectIPreg1_search($op_from, $op_to, $search);
                                                         echo "class='table-success'";
                                                     } ?>>
                                                     <td><?= $sn ?></td>
+                                                    <td><?= $res['uhid'] ?></td>
                                                     <td><?= $res['opd_no'] ?></td>
                                                     <td><?= $res['ipd_no'] ?></td>
                                                     <td><?= date("d.m.Y", strtotime($res['admission_date'])) ?></td>

@@ -329,18 +329,18 @@ function selectIPreg1_search($from,$to,$search)
   $data='';
    if(strlen($search)>1 )
   {
-      $data .="(address like '%$search%' || ipd_no like '$search%' || c.name like '%$search%' || c.mobile like '$search%' || opd_no like '$search%')";
+      $data .="(address like '%$search%' || ipd_no like '$search%' || c.name like '%$search%' || c.mobile like '$search%' || opd_no like '$search%' || c.opd_no in (SELECT co.opd_no FROM central_opd co WHERE co.uhid like '$search%'))";
   }
   else if($_SESSION['role']=='Generated')
   {
       $data .=" is_generated=1 and DATE(admission_date) between '$from' and '$to'";
   }
-  else 
+  else
   {
       $data .=" DATE(admission_date) between '$from' and '$to'";
   }
-  
-  $sql="SELECT c.*,d.unit,b.bed_number as bed,de.dept_name,lr.test_result FROM department de,`central_ipd` c LEFT JOIN `doctor` d on concat(TRIM(d.name),' ',TRIM(d.last_name))=TRIM(c.doctor) LEFT JOIN bed b on b.id=bed_id left join lab_report lr on lr.patient_id=c.ipd_no WHERE $data and de.id=c.dept_id  group by c.id order by c.id";
+
+  $sql="SELECT c.*,(SELECT co.uhid FROM central_opd co WHERE co.opd_no=c.opd_no LIMIT 1) as uhid,d.unit,b.bed_number as bed,de.dept_name,lr.test_result FROM department de,`central_ipd` c LEFT JOIN `doctor` d on concat(TRIM(d.name),' ',TRIM(d.last_name))=TRIM(c.doctor) LEFT JOIN bed b on b.id=bed_id left join lab_report lr on lr.patient_id=c.ipd_no WHERE $data and de.id=c.dept_id  group by c.id order by c.id";
 //   echo $sql;
   $res=mysqli_query($con,$sql);
   return $res;
