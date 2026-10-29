@@ -139,7 +139,7 @@ class discharge{
          else{
               $data ="DATE(discharge_date) between '$min' and '$max'";
          }
-          $sql="SELECT d.*,c.created_by as createdby FROM `discharge` d, central_ipd c WHERE $data and c.ipd_no=d.patient_id";
+          $sql="SELECT d.*,c.created_by as createdby,c.opd_no as opdno FROM `discharge` d, central_ipd c WHERE $data and c.ipd_no=d.patient_id";
         //   echo $sql; exit;
           $res=mysqli_query($con,$sql);
           return $res;

@@ -385,6 +385,16 @@ $('#cc_id_type').on('change', function() {
   $('#cc_identifier').attr('placeholder', hints[$(this).val()] || '');
 });
 
+/* ── Deep link: careContextLink.php?opd_no=XXX (or ?ipd_no=XXX) auto-searches ── */
+$(function() {
+  const params = new URLSearchParams(window.location.search);
+  const idType = ['opd_no', 'ipd_no'].find(function(t) { return params.get(t); });
+  if (!idType) return;
+  $('#cc_id_type').val(idType).trigger('change');
+  $('#cc_identifier').val(params.get(idType).trim());
+  $('#cc_search_btn').click();
+});
+
 /* ── Render patient info ── */
 function renderPatient(p) {
   patientData = p;

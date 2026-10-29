@@ -178,6 +178,9 @@ else{
                                                 <td> <a href="editDischarge.php?id=<?= $row['id']?>" title="Edit" class="badge badge-pill badge-primary mr-2"><i class="ri-edit-line" style="font-size:15px"></i> </a>
                                                 <a href="<?= $row['discharge_file']?>" title="View" class="badge badge-pill badge-warning mr-2"><i class="ri-eye-line" style="font-size:15px"></i> </a>
                                                 <a href="print_discharge_summary_ip.php?id=<?= $row['patient_id']?>" target="_blank" title="Print Discharge Summary" class="badge badge-pill badge-light mr-2"><i class="ri-file-list-3-line" style="font-size:15px"></i> </a>
+                                                <?php if(!empty($row['opdno'])) { ?>
+                                                <a href="careContextLink.php?opd_no=<?= urlencode($row['opdno'])?>" target="_blank" title="Care Linking" class="badge badge-pill badge-info mr-2"><i class="ri-links-line" style="font-size:15px"></i> </a>
+                                                <?php } ?>
                                                 </td>
                                                  
                                                  <?php } ?>
